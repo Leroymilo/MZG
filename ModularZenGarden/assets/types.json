@@ -1,0 +1,14 @@
+{
+	"empty 3x3": {
+		"width": 3,
+		"height": 3,
+		"author": "Leroymilo",
+		"use_default_base": true,
+		"use_default_feature": true
+	},
+	"stones": {
+		"width": 3,
+		"height": 3,
+		"author": "SonreirAngel"
+	}
+}
