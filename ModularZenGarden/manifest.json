@@ -2,7 +2,7 @@
     "Name": "Modular Zen Garden",
     "Author": "leroymilo",
     "Version": "1.0",
-    "MinimumApiVersion": "4.0.4",
+    "MinimumApiVersion": "4.0.5",
     "Description": "Adds a set of new craftables: Zen Gardens",
     "UniqueID": "leroymilo.ModularZenGarden",
     "EntryDll": "ModularZenGarden.dll",
