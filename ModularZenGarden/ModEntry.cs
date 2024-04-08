@@ -52,6 +52,8 @@ namespace ModularZenGarden
 
 		private void load_assets(IModHelper helper)
 		{
+			SpriteManager.load_sprites(helper);
+
 			Dictionary<string, Dictionary<string, object>> types_data =
 				helper.ModContent.Load<Dictionary<string, Dictionary<string, object>>>("assets/types.json");
 			
@@ -61,8 +63,6 @@ namespace ModularZenGarden
 					type_name, type_data, helper
 				);
 			}
-			
-			SpriteManager.load_borders(helper);
 
 			string mod_path = Helper.DirectoryPath;
 			string borders_path = Path.Combine(mod_path, "assets", "borders");

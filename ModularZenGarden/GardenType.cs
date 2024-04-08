@@ -36,6 +36,10 @@ namespace ModularZenGarden {
 			name = type_name;
 			author = (string)type_data["author"];
 			size = new( (long)type_data["width"], (long)type_data["height"] );
+			if (size.X < 1 || size.Y < 1)
+			{
+				throw new ArgumentException($"Size of type {type_name} is invalid.");
+			}
 			dim = $"{size.X}x{size.Y}";
 
 			string path = $"assets/gardens/{name}/";
@@ -43,63 +47,72 @@ namespace ModularZenGarden {
 			// loading textures of bases and features
 			foreach (string season in Utils.seasons)
 			{
-				try
-				{
-					// Searching for seasonal variant
-					bases[season] = helper.ModContent.Load<Texture2D>(
-						path + $"base_{season}.png"
-					);
-				}
-				catch (Microsoft.Xna.Framework.Content.ContentLoadException)
+				if ((bool)type_data.GetValueOrDefault("use_default_base", false))
+					bases[season] = SpriteManager.get_default_base(size, season);
+				
+				else
 				{
 					try
 					{
-						// Searching for general sprite
+						// Searching for seasonal variant
 						bases[season] = helper.ModContent.Load<Texture2D>(
-							path + $"base.png"
+							path + $"base_{season}.png"
 						);
 					}
 					catch (Microsoft.Xna.Framework.Content.ContentLoadException)
 					{
-						Utils.monitor.Log(
-							$"Sprite for {season} base of {type_name} was not found, fallback to default.",
-							LogLevel.Warn
-						);
-						// Loading default sprite
-						bases[season] = helper.ModContent.Load<Texture2D>(
-							$"assets/default_base_{dim}"
-						);
+						try
+						{
+							// Searching for general sprite
+							bases[season] = helper.ModContent.Load<Texture2D>(
+								path + $"base.png"
+							);
+						}
+						catch (Microsoft.Xna.Framework.Content.ContentLoadException)
+						{
+							Utils.monitor.Log(
+								$"Sprite for {season} base of {type_name} was not found, fallback to default.",
+								LogLevel.Warn
+							);
+							// Loading default sprite
+							bases[season] = SpriteManager.get_default_base(size, season);
+						}
 					}
 				}
 
-				try
-				{
-					// Searching for seasonal variant
-					features[season] = helper.ModContent.Load<Texture2D>(
-						path + $"feature_{season}.png"
-					);
-				}
-				catch (Microsoft.Xna.Framework.Content.ContentLoadException)
+				if ((bool)type_data.GetValueOrDefault("use_default_feature", false))
+					features[season] = SpriteManager.get_default_feature(size);
+
+				else
 				{
 					try
 					{
-						// Searching for general sprite
+						// Searching for seasonal variant
 						features[season] = helper.ModContent.Load<Texture2D>(
-							path + $"feature.png"
+							path + $"feature_{season}.png"
 						);
 					}
 					catch (Microsoft.Xna.Framework.Content.ContentLoadException)
 					{
-						Utils.monitor.Log(
-							$"Sprite for {season} feature of {type_name} was not found, fallback to default.",
-							LogLevel.Warn
-						);
-						// Loading default sprite
-						features[season] = helper.ModContent.Load<Texture2D>(
-							$"assets/default_feature_{dim}"
-						);
+						try
+						{
+							// Searching for general sprite
+							features[season] = helper.ModContent.Load<Texture2D>(
+								path + $"feature.png"
+							);
+						}
+						catch (Microsoft.Xna.Framework.Content.ContentLoadException)
+						{
+							Utils.monitor.Log(
+								$"Sprite for {season} feature of {type_name} was not found, fallback to default.",
+								LogLevel.Warn
+							);
+							// Loading default sprite
+							features[season] = SpriteManager.get_default_feature(size);
+						}
 					}
 				}
+				
 			}
 		}
 
@@ -131,10 +144,22 @@ namespace ModularZenGarden {
 				source: bases[season],
 				patchMode: PatchMode.Replace
 			);
-			editor.PatchImage(
-				source: Utils.border_textures[$"border_default_{dim}"],
-				patchMode: PatchMode.Overlay
-			);
+
+			Dictionary<Vector2, Texture2D> border_parts = SpriteManager.get_default_border(size);
+
+			foreach (Vector2 tile in get_draw_order())
+			{
+				editor.PatchImage(
+					source: border_parts[tile],
+					targetArea: new Rectangle(
+						(int)(tile.X * SpriteManager.tile_size.X),
+						(int)((tile.Y + size.Y-1) * SpriteManager.tile_size.X),
+						(int)SpriteManager.tile_size.X,
+						(int)SpriteManager.tile_size.Y
+					),
+					patchMode: PatchMode.Overlay
+				);
+			}
 			editor.PatchImage(
 				source: features[season],
 				patchMode: PatchMode.Overlay
