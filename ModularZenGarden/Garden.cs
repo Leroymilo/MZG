@@ -118,7 +118,31 @@ namespace ModularZenGarden {
 				));
 			}
 
-			// TODO : 1x1 & others
+			else if (type.size.X == 1 && type.size.Y == 1)
+			{
+				border_parts.Add(new(
+					SpriteManager.get_border(
+						type.size, "top", get_contact_value(new(0, -1))
+					), Point.Zero
+				));
+				border_parts.Add(new(
+					SpriteManager.get_border(
+						type.size, "left", get_contact_value(new(-1, 0))
+					), Point.Zero
+				));
+				border_parts.Add(new(
+					SpriteManager.get_border(
+						type.size, "right", get_contact_value(new(1, 0))
+					), Point.Zero
+				));
+				border_parts.Add(new(
+					SpriteManager.get_border(
+						type.size, "bottom", get_contact_value(new(0, 1))
+					), Point.Zero
+				));
+			}
+
+			else throw new Exception("Unsupported Garden Size.");
 		}
 
 		private int get_contact_value(Point tile)

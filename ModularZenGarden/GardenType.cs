@@ -22,7 +22,7 @@ namespace ModularZenGarden {
 	class GardenType
 	{
 		public readonly string name;
-		public readonly string author;
+		public readonly string? author = null;
 		public readonly Point size;
 		public readonly string dim;
 		public readonly Dictionary<string, Texture2D> bases = new();
@@ -41,25 +41,52 @@ namespace ModularZenGarden {
 			return types[get_type_name(furniture.ItemId)];
 		}
 
+		public static void make_blank_types(IModHelper helper)
+		{
+			Dictionary<string, object> type_data = new() {
+				{"width", 1L},
+				{"height", 1L},
+				{"use_default_base", true},
+				{"use_default_feature", true}
+			};
+			new GardenType($"empty 1x1", type_data, helper);
+
+			for (long w = 2; w < 4; w++)
+			{
+				for (long h = 2; h < 4; h++)
+				{
+					type_data = new() {
+						{"width", w},
+						{"height", h},
+						{"use_default_base", true},
+						{"use_default_feature", true}
+					};
+					new GardenType($"empty {w}x{h}", type_data, helper);
+				}
+			}
+		}
+
 		public GardenType(string type_name, Dictionary<string, object> type_data, IModHelper helper)
 		{
 			types[type_name] = this;
 
 			name = type_name;
-			author = (string)type_data["author"];
+
+			if (type_data.ContainsKey("author"))
+				author = (string)type_data["author"];
+			
 			size = new(
 				(int)(long)type_data["width"],
 				(int)(long)type_data["height"]
 			);
 			if (size.X < 1 || size.Y < 1)
-			{
 				throw new ArgumentException($"Size of type {type_name} is invalid.");
-			}
+			if ((size.X == 1) ^ (size.Y == 1))
+				throw new ArgumentException("Garden of 1 tile wide or tall are not supported. Consider using multiple 1x1 gardens.");
 			dim = $"{size.X}x{size.Y}";
 
-			string path = $"assets/gardens/{name}/";
-
 			// loading textures of bases and features
+			string path = $"assets/gardens/{name}/";
 			foreach (string season in Utils.seasons)
 			{
 				if ((bool)type_data.GetValueOrDefault("use_default_base", false))
@@ -142,7 +169,8 @@ namespace ModularZenGarden {
 			string_data += "/1";							// rotation
 			string_data += "/20";							// magic number price for now
 			string_data += "/2";							// placeable outdoors & indoors
-			string_data += $"/Zen Garden by {author}";		// display name
+			string_data += "/Zen Garden";					// display name
+			if (author != null) string_data += $" by {author}";
 			string_data += "/0";							// sprite index
 			string_data += $"/{full_name}";					// texture path (to direct load overwrite)
 
@@ -243,7 +271,6 @@ namespace ModularZenGarden {
 
 				for (int x = 1; x < size.X-1; x++)
 					border_parts.Add(new(SpriteManager.get_border(size, "bottom", 0), new(x, size.Y-1)));
-
 
 				border_parts.Add(new(SpriteManager.get_border(size, "bottom_right", 0), new(size.X-1, size.Y-1)));
 			}

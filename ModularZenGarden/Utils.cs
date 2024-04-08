@@ -1,5 +1,4 @@
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI;
 using StardewValley.Objects;
 
@@ -9,8 +8,6 @@ namespace ModularZenGarden {
 	{
 		public static readonly string[] seasons = {"spring", "summer", "fall", "winter"};
 		public static IMonitor? monitor;
-		public static readonly Dictionary<string, Texture2D> border_textures = new();
-		// keys are file names without extension
 
 		public static Point get_pos(Furniture furniture)
 		{

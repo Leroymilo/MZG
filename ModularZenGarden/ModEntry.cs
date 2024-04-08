@@ -1,6 +1,5 @@
 ﻿using System.Reflection;
 using HarmonyLib;
-using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewValley.Objects;
@@ -56,21 +55,12 @@ namespace ModularZenGarden
 			Dictionary<string, Dictionary<string, object>> types_data =
 				helper.ModContent.Load<Dictionary<string, Dictionary<string, object>>>("assets/types.json");
 			
+			GardenType.make_blank_types(helper);
 			foreach ((string type_name, var type_data) in types_data)
 			{
 				new GardenType(
 					type_name, type_data, helper
 				);
-			}
-
-			string mod_path = Helper.DirectoryPath;
-			string borders_path = Path.Combine(mod_path, "assets", "borders");
-			foreach (string full_path in Directory.GetFiles(borders_path, "*.png"))
-			{
-				string name = Path.GetFileNameWithoutExtension(full_path);
-				string path = Path.GetRelativePath(mod_path, full_path);
-
-				Utils.border_textures[name] = helper.ModContent.Load<Texture2D>(path);
 			}
 		}
 
