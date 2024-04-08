@@ -5,7 +5,7 @@ namespace ModularZenGarden {
 	
 	class GardenCache
 	{
-		static readonly Dictionary<Vector2, Garden> gardens = new();
+		static readonly Dictionary<Point, Garden> gardens = new();
 
 		static readonly HashSet<Garden> to_update = new(new GardenComparer());
 
@@ -26,8 +26,8 @@ namespace ModularZenGarden {
 
 			foreach (Garden garden_2 in neighbors)
 			{
-				Vector2 delta = garden_2.position - garden.position;
-				garden.type.remove_contacts(garden_2, -delta);
+				Point delta = garden_2.position - garden.position;
+				garden.type.remove_contacts(garden_2, Point.Zero - delta);
 			}
 
 			to_update.UnionWith(neighbors);
@@ -41,9 +41,9 @@ namespace ModularZenGarden {
 
 			foreach (Garden garden_2 in neighbors)
 			{
-				Vector2 delta = garden_2.position - garden.position;
+				Point delta = garden_2.position - garden.position;
 				garden_2.type.add_contacts(garden, delta);
-				garden.type.add_contacts(garden_2, -delta);
+				garden.type.add_contacts(garden_2, Point.Zero - delta);
 			}
 
 			gardens[garden.position] = garden;
@@ -64,7 +64,7 @@ namespace ModularZenGarden {
 
 		public static Garden? get_garden(Furniture furniture)
 		{
-			Vector2 base_pos = Utils.get_pos(furniture);
+			Point base_pos = Utils.get_pos(furniture);
 			GardenType type = GardenType.get_type(furniture);
 			// Removing a garden from a tile that's not its top left tile will move it
 			// To find it anyway, its necessary to search around the position
@@ -72,7 +72,7 @@ namespace ModularZenGarden {
 			{
 				for (int y = 0; y < type.size.Y; y++)
 				{
-					Vector2 rel_pos = base_pos - new Vector2(x, y);
+					Point rel_pos = base_pos - new Point(x, y);
 					if (gardens.ContainsKey(rel_pos))
 					{
 						if (gardens[rel_pos].type == type) {
@@ -91,7 +91,7 @@ namespace ModularZenGarden {
 
 			foreach (Garden garden_2 in gardens.Values)
 			{
-				Vector2 delta = garden_2.position - garden.position;
+				Point delta = garden_2.position - garden.position;
 				if (delta.X < -garden_2.type.size.X || delta.X > garden.type.size.X) continue;
 				if (delta.Y < -garden_2.type.size.Y || delta.Y > garden.type.size.Y) continue;
 				neighbors.Add(garden_2);

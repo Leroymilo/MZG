@@ -12,9 +12,17 @@ namespace ModularZenGarden {
 		public static readonly Dictionary<string, Texture2D> border_textures = new();
 		// keys are file names without extension
 
-		public static Vector2 get_pos(Furniture furniture)
+		public static Point get_pos(Furniture furniture)
 		{
-			return new Vector2(furniture.boundingBox.X/64, furniture.boundingBox.Y/64);
+			return new Point(furniture.boundingBox.X/64, furniture.boundingBox.Y/64);
+		}
+
+		public static void log(string message, LogLevel log_level = LogLevel.Trace)
+		{
+			if (monitor == null)
+				throw new NullReferenceException("Monitor was not set.");
+			
+			monitor.Log(message, log_level);
 		}
 	}
 

@@ -2,20 +2,34 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI;
 using StardewModdingAPI.Utilities;
+using StardewValley;
 using StardewValley.Objects;
 
 namespace ModularZenGarden {
+
+	struct BorderPart
+	{
+		public Texture2D texture;
+		public Point tile;
+
+		public BorderPart(Texture2D texture, Point tile)
+		{
+			this.texture = texture;
+			this.tile = tile;
+		}
+	}
 	
 	class GardenType
 	{
 		public readonly string name;
 		public readonly string author;
-		public readonly Vector2 size;
+		public readonly Point size;
 		public readonly string dim;
 		public readonly Dictionary<string, Texture2D> bases = new();
 		public readonly Dictionary<string, Texture2D> features = new();
 
 		public static readonly Dictionary<string, GardenType> types = new();
+		public static readonly Dictionary<Point, List<BorderPart>> default_borders = new();
 
 		public static string get_type_name(string full_name)
 		{
@@ -31,11 +45,12 @@ namespace ModularZenGarden {
 		{
 			types[type_name] = this;
 
-			if (Utils.monitor == null) throw new NullReferenceException("Monitor was not set.");
-
 			name = type_name;
 			author = (string)type_data["author"];
-			size = new( (long)type_data["width"], (long)type_data["height"] );
+			size = new(
+				(int)(long)type_data["width"],
+				(int)(long)type_data["height"]
+			);
 			if (size.X < 1 || size.Y < 1)
 			{
 				throw new ArgumentException($"Size of type {type_name} is invalid.");
@@ -70,7 +85,7 @@ namespace ModularZenGarden {
 						}
 						catch (Microsoft.Xna.Framework.Content.ContentLoadException)
 						{
-							Utils.monitor.Log(
+							Utils.log(
 								$"Sprite for {season} base of {type_name} was not found, fallback to default.",
 								LogLevel.Warn
 							);
@@ -103,7 +118,7 @@ namespace ModularZenGarden {
 						}
 						catch (Microsoft.Xna.Framework.Content.ContentLoadException)
 						{
-							Utils.monitor.Log(
+							Utils.log(
 								$"Sprite for {season} feature of {type_name} was not found, fallback to default.",
 								LogLevel.Warn
 							);
@@ -134,29 +149,43 @@ namespace ModularZenGarden {
 			return string_data;
 		}
 
+		public Texture2D get_base()
+		{
+			Texture2D base_ = bases[SDate.Now().SeasonKey];
+
+			Texture2D texture = new(
+				GameRunner.instance.GraphicsDevice,
+				base_.Width,
+				base_.Height
+			);
+
+			texture.CopyFromTexture(base_);
+
+			return texture;
+		}
+
 		public void patch_image(IAssetDataForImage editor)
 		{
 			// Patching the image used for the items
 
 			string season = SDate.Now().SeasonKey;
 
-			editor.PatchImage(
-				source: bases[season],
-				patchMode: PatchMode.Replace
-			);
+			// editor.PatchImage(
+			// 	source: bases[season],
+			// 	patchMode: PatchMode.Replace
+			// );
 
-			Dictionary<Vector2, Texture2D> border_parts = SpriteManager.get_default_border(size);
-
-			foreach (Vector2 tile in get_draw_order())
+			foreach (BorderPart border_part in get_default_border())
 			{
+				Rectangle target_area = new(
+					border_part.tile.X * SpriteManager.tile_size.X,
+					(border_part.tile.Y + size.Y - 1) * SpriteManager.tile_size.X,
+					SpriteManager.tile_size.X, SpriteManager.tile_size.Y
+				);
+
 				editor.PatchImage(
-					source: border_parts[tile],
-					targetArea: new Rectangle(
-						(int)(tile.X * SpriteManager.tile_size.X),
-						(int)((tile.Y + size.Y-1) * SpriteManager.tile_size.X),
-						(int)SpriteManager.tile_size.X,
-						(int)SpriteManager.tile_size.Y
-					),
+					source: border_part.texture,
+					targetArea: target_area,
 					patchMode: PatchMode.Overlay
 				);
 			}
@@ -166,49 +195,71 @@ namespace ModularZenGarden {
 			);
 		}
 
-		public void add_contacts(Garden garden, Vector2 origin)
+		public void add_contacts(Garden garden, Point origin)
 		{
 			for (int x = 0; x < size.X; x++)
 			{
 				for (int y = 0; y < size.Y; y++)
 				{
-					garden.add_contact(origin + new Vector2(x, y));
+					garden.add_contact(origin + new Point(x, y));
 				}
 			}
 		}
 
-		public void remove_contacts(Garden garden, Vector2 origin)
+		public void remove_contacts(Garden garden, Point origin)
 		{
 			for (int x = 0; x < size.X; x++)
 			{
 				for (int y = 0; y < size.Y; y++)
 				{
-					garden.remove_contact(origin + new Vector2(x, y));
+					garden.remove_contact(origin + new Point(x, y));
 				}
 			}
 		}
 
-		public List<Vector2> get_draw_order()
+		public List<BorderPart> get_default_border()
 		{
-			List<Vector2> draw_order = new();
+			if (default_borders.ContainsKey(size))
+				return default_borders[size];
 
-			for (int x = 0; x < size.X; x++)
+			List<BorderPart> border_parts = new();
+
+			if (size.X > 1 && size.Y > 1)
 			{
-				draw_order.Add(new(x, 0));
+				border_parts.Add(new(SpriteManager.get_border(size, "top_left", 0), Point.Zero));
+
+				for (int x = 1; x < size.X-1; x++)
+					border_parts.Add(new(SpriteManager.get_border(size, "top", 0), new(x, 0)));
+
+				border_parts.Add(new(SpriteManager.get_border(size, "top_right", 0), new(size.X-1, 0)));
+
+				for (int y = 1; y < size.Y-1; y++)
+				{
+					border_parts.Add(new(SpriteManager.get_border(size, "left", 0), new(0, y)));
+					border_parts.Add(new(SpriteManager.get_border(size, "right", 0), new(size.X-1, y)));
+				}
+				
+				border_parts.Add(new(SpriteManager.get_border(size, "bottom_left", 0), new(0, size.Y-1)));
+
+				for (int x = 1; x < size.X-1; x++)
+					border_parts.Add(new(SpriteManager.get_border(size, "bottom", 0), new(x, size.Y-1)));
+
+
+				border_parts.Add(new(SpriteManager.get_border(size, "bottom_right", 0), new(size.X-1, size.Y-1)));
 			}
 
-			for (int y = 1; y < size.Y-1; y++)
+			else if (size.X == 1 && size.Y == 1)
 			{
-				draw_order.Add(new(0, 		 y));
-				draw_order.Add(new(size.X-1, y));
+				border_parts.Add(new(SpriteManager.get_border(size, "top", 0), Point.Zero));
+				border_parts.Add(new(SpriteManager.get_border(size, "left", 0), Point.Zero));
+				border_parts.Add(new(SpriteManager.get_border(size, "right", 0), Point.Zero));
+				border_parts.Add(new(SpriteManager.get_border(size, "bottom", 0), Point.Zero));
 			}
 
-			for (int x = 0; x < size.X; x++)
-			{
-				draw_order.Add(new(x, size.Y-1));
-			}
+			else throw new Exception("Unsupported Garden Size.");
 
-			return draw_order;
+			default_borders[size] = border_parts;
+			return border_parts;
 		}
 
 		// override object.ToString

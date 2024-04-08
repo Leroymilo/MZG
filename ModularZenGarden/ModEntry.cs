@@ -19,7 +19,6 @@ namespace ModularZenGarden
         public override void Entry(IModHelper helper)
         {
 			Utils.monitor = Monitor;
-            // helper.Events.Input.ButtonPressed += on_button_pressed;
 			helper.Events.Content.AssetRequested += on_asset_requested;
 			helper.Events.World.FurnitureListChanged += on_furniture_list_changed;
 			helper.Events.Player.Warped += on_player_warped;
@@ -101,7 +100,8 @@ namespace ModularZenGarden
 				type_name = GardenType.get_type_name(type_name);
 				GardenType type = GardenType.types[type_name];
 
-				e.LoadFromModFile<Texture2D>($"assets/default_{type.dim}", AssetLoadPriority.Medium);
+				e.LoadFrom(type.get_base, AssetLoadPriority.Medium);
+				// e.LoadFromModFile<Texture2D>($"assets/default_{type.dim}", AssetLoadPriority.Medium);
 				e.Edit(asset =>
 				{
 					type.patch_image(asset.AsImage());

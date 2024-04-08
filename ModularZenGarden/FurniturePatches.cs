@@ -23,9 +23,6 @@ namespace ModularZenGarden {
 			int x, int y, float alpha = 1f
 		)
 		{
-			if (Utils.monitor == null)
-				throw new NullReferenceException("Monitor was not set.");
-
 			try
 			{
 				// This only applies to Zen Gardens
@@ -40,16 +37,13 @@ namespace ModularZenGarden {
 			}
 			catch (Exception ex)
 			{
-				Utils.monitor.Log($"Failed in {nameof(draw_prefix)}:\n{ex}", LogLevel.Error);
+				Utils.log($"Failed in {nameof(draw_prefix)}:\n{ex}", LogLevel.Error);
 				return true; // run original logic
 			}
 		}
 
 		private static void draw_furniture(Furniture __instance, int x, int y)
 		{
-			if (Utils.monitor == null)
-				throw new NullReferenceException("Monitor was not set.");
-			
 			// idk when this applies, but it's copied from Furniture.draw
 			if (__instance.isTemporarilyInvisible)
 			{
@@ -95,37 +89,41 @@ namespace ModularZenGarden {
 
 			draw_texture(base_texture);
 			depth += 0.01f / 10000f;
+
 			if (garden == null || !Furniture.isDrawingLocationFurniture)
 			{
-				// draw default border when placing
-				draw_texture(Utils.border_textures[$"border_default_3x3"]);
-				depth += 0.01f / 10000f;
+				// draw default borders
+				draw_border(type.get_default_border(), type.size);
 			}
 			else
 			{
-				// draw computed borders when placed
-				foreach (Vector2 tile_pos in garden.type.get_draw_order())
-				{
-					Texture2D texture = garden.border_textures[tile_pos];
-
-					Rectangle new_value = new(
-						0, 0,
-						16, 32
-					);
-					Vector2 offset = new(
-						tile_pos.X * 64,
-						(tile_pos.Y + type.size.Y-1) * 64
-					);
-					draw_texture(texture, offset, new_value);
-					depth += 0.01f / 10000f;
-				}
+				// draw built borders
+				draw_border(garden.border_parts, type.size);
 			}
+
 			draw_texture(feature_texture);
+		}
+
+		private static void draw_border(List<BorderPart> border_parts, Point size)
+		{
+			foreach (BorderPart border_part in border_parts)
+			{
+				Rectangle new_value = new(
+					0, 0,
+					16, 32
+				);
+				Point offset = new(
+					border_part.tile.X * 64,
+					(border_part.tile.Y + size.Y-1) * 64
+				);
+				draw_texture(border_part.texture, offset, new_value);
+				depth += 0.01f / 10000f;
+			}
 		}
 
 		private static void draw_texture(
 			Texture2D texture,
-			Vector2? offset = null,
+			Point? offset = null,
 			Rectangle? val = null
 		)
 		{
@@ -135,7 +133,7 @@ namespace ModularZenGarden {
 			if (sprite_batch == null) throw new NullReferenceException("Sprite batch was not set.");
 
 			Vector2 pos = position;
-			if (offset != null) pos += (Vector2)offset;
+			if (offset != null) pos += ((Point)offset).ToVector2();
 			if (val == null) val = value;
 
 			sprite_batch.Draw(

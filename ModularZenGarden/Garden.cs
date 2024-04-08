@@ -1,45 +1,41 @@
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
 using StardewValley.Objects;
 
 namespace ModularZenGarden {
 	
 	class Garden
 	{
-		public Vector2 position { get; private set; }
+		public Point position { get; private set; }
 		public GardenType type { get; private set; }
 
-		private Furniture furniture;
-
-		private Dictionary<Vector2, bool> contacts = new();
-		public Dictionary<Vector2, Texture2D> border_textures { get; private set; } = new();
+		private readonly Dictionary<Point, bool> contacts = new();
+		public readonly List<BorderPart> border_parts = new();
 
 		public Garden(Furniture furniture)
 		{
 			position = Utils.get_pos(furniture);
 			type = GardenType.get_type(furniture);
-			this.furniture = furniture;
 
 			// building the dictionary of contacts around the Garden
 			for (int x = -1; x <= type.size.X; x++)
 			{
-				contacts[new Vector2(x, -1)] = false;
-				contacts[new Vector2(x, type.size.Y)] = false;
+				contacts[new Point(x, -1)] = false;
+				contacts[new Point(x, type.size.Y)] = false;
 			}
 			for (int y = 0; y < type.size.Y; y++)
 			{
-				contacts[new Vector2(-1, y)] = false;
-				contacts[new Vector2(type.size.X, y)] = false;
+				contacts[new Point(-1, y)] = false;
+				contacts[new Point(type.size.X, y)] = false;
 			}
 		}
 
-		public void add_contact(Vector2 tile)
+		public void add_contact(Point tile)
 		{
 			if (contacts.ContainsKey(tile))
 				contacts[tile] = true;
 		}
 
-		public void remove_contact(Vector2 tile)
+		public void remove_contact(Point tile)
 		{
 			if (contacts.ContainsKey(tile))
 				contacts[tile] = false;
@@ -47,70 +43,85 @@ namespace ModularZenGarden {
 	
 		public void update_texture()
 		{
-			// top left
-			Vector2 tile = new(0, 0);
-			border_textures[tile] = SpriteManager.get_border(
-				type.size, "top_left",
-				get_contact_value(tile)
-			);
+			border_parts.Clear();
 
-			// top
-			for (tile.X = 1; tile.X < type.size.X-1; tile.X++)
+			if (type.size.X > 1 && type.size.Y > 1)
 			{
-				border_textures[tile] = SpriteManager.get_border(
-					type.size, "top",
-					get_contact_value(tile)
-				);
-			}
+				// top left
+				Point tile = Point.Zero;
+				border_parts.Add(new (
+					SpriteManager.get_border(
+						type.size, "top_left", get_contact_value(tile)
+					), tile
+				));
 
-			// top right
-			tile.X = type.size.X-1;
-			border_textures[tile] = SpriteManager.get_border(
-				type.size, "top_right",
-				get_contact_value(tile)
-			);
+				// top
+				for (tile.X = 1; tile.X < type.size.X-1; tile.X++)
+				{
+					border_parts.Add(new (
+						SpriteManager.get_border(
+							type.size, "top", get_contact_value(tile)
+						), tile
+					));
+				}
 
-			// left & right
-			for (tile.Y = 1; tile.Y < type.size.Y-1; tile.Y++)
-			{
-				tile.X = 0;
-				border_textures[tile] = SpriteManager.get_border(
-					type.size, "left",
-					get_contact_value(tile)
-				);
-					
+				// top right
 				tile.X = type.size.X-1;
-				border_textures[tile] = SpriteManager.get_border(
-					type.size, "right",
-					get_contact_value(tile)
-				);
+				border_parts.Add(new (
+					SpriteManager.get_border(
+						type.size, "top_right", get_contact_value(tile)
+					), tile
+				));
+
+				// left & right
+				for (tile.Y = 1; tile.Y < type.size.Y-1; tile.Y++)
+				{
+					tile.X = 0;
+					border_parts.Add(new (
+						SpriteManager.get_border(
+							type.size, "left", get_contact_value(tile)
+						), tile
+					));
+						
+					tile.X = type.size.X-1;
+					border_parts.Add(new (
+						SpriteManager.get_border(
+							type.size, "right", get_contact_value(tile)
+						), tile
+					));
+				}
+
+				// bottom left
+				tile.X = 0; tile.Y = type.size.Y-1;
+				border_parts.Add(new (
+					SpriteManager.get_border(
+						type.size, "bottom_left", get_contact_value(tile)
+					), tile
+				));
+
+				// bottom
+				for (tile.X = 1; tile.X < type.size.X-1; tile.X++)
+				{
+					border_parts.Add(new (
+						SpriteManager.get_border(
+							type.size, "bottom", get_contact_value(tile)
+						), tile
+					));
+				}
+
+				// bottom right
+				tile.X = type.size.X-1;
+				border_parts.Add(new (
+					SpriteManager.get_border(
+						type.size, "bottom_right", get_contact_value(tile)
+					), tile
+				));
 			}
 
-			// bottom left
-			tile.X = 0; tile.Y = type.size.Y-1;
-			border_textures[tile] = SpriteManager.get_border(
-				type.size, "bottom_left",
-				get_contact_value(tile)
-			);
-
-			// bottom
-			for (tile.X = 1; tile.X < type.size.X-1; tile.X++)
-			{
-				border_textures[tile] = SpriteManager.get_border(
-					type.size, "bottom",
-					get_contact_value(tile)
-				);
-			}
-
-			// bottom right
-			tile.X = type.size.X-1;
-			border_textures[tile] = SpriteManager.get_border(
-				type.size, "bottom_right",
-				get_contact_value(tile)
-			);
+			// TODO : 1x1 & others
 		}
 
-		private int get_contact_value(Vector2 tile)
+		private int get_contact_value(Point tile)
 		{
 			int value = 0;
 			int p = 0;
@@ -118,7 +129,7 @@ namespace ModularZenGarden {
 			{
 				for (int x = -1; x <= 1; x++)
 				{
-					Vector2 contact_tile = tile + new Vector2(x, y);
+					Point contact_tile = tile + new Point(x, y);
 					if (contacts.ContainsKey(contact_tile))
 					{
 						if (contacts[contact_tile])

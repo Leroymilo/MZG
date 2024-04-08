@@ -1,4 +1,18 @@
 {
+	"empty 1x1": {
+		"width": 1,
+		"height": 1,
+		"author": "Leroymilo",
+		"use_default_base": true,
+		"use_default_feature": true
+	},
+	"empty 2x2": {
+		"width": 2,
+		"height": 2,
+		"author": "Leroymilo",
+		"use_default_base": true,
+		"use_default_feature": true
+	},
 	"empty 3x3": {
 		"width": 3,
 		"height": 3,
