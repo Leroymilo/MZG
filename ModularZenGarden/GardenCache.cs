@@ -9,13 +9,18 @@ namespace ModularZenGarden {
 
 		static readonly HashSet<Garden> to_update = new(new GardenComparer());
 
+		static readonly HashSet<Point> catalogues = new();
+
 		public static void clear()
 		{
 			gardens.Clear();
+			catalogues.Clear();
 		}
 
-		public static void remove_garden(Furniture furniture)
+		public static bool remove_garden(Furniture furniture)
 		{
+			// Returns true if the furniture is a catalogue
+
 			Garden? garden = get_garden(furniture) ?? throw new NullReferenceException(
 					$"No registered garden matched at {Utils.get_pos(furniture)}."
 				);
@@ -31,10 +36,19 @@ namespace ModularZenGarden {
 			}
 
 			to_update.UnionWith(neighbors);
+
+			if (garden.type.name == "catalogue")
+			{
+				catalogues.Remove(garden.position);
+				return true;
+			}
+			return false;
 		}
 
-		public static void add_garden(Furniture furniture)
+		public static bool add_garden(Furniture furniture)
 		{
+			// Returns true if the furniture is a catalogue
+
 			Garden garden = new(furniture);
 
 			HashSet<Garden> neighbors = get_neighbors(garden);
@@ -50,6 +64,13 @@ namespace ModularZenGarden {
 			
 			to_update.UnionWith(neighbors);
 			to_update.Add(garden);
+
+			if (garden.type.name == "catalogue")
+			{
+				catalogues.Add(garden.position);
+				return true;
+			}
+			return false;
 		}
 
 		public static void update_textures()

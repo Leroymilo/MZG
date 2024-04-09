@@ -1,15 +1,28 @@
 ﻿using System.Reflection;
 using HarmonyLib;
+using Microsoft.Xna.Framework;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewValley.Objects;
+using StardewValley;
+using xTile;
+using xTile.Tiles;
+using xTile.Layers;
+using xTile.Dimensions;
+using StardewValley.GameData.Shops;
 
 namespace ModularZenGarden
 {
+	using Dict = Dictionary<string, object>;
 
     /// <summary>The mod entry point.</summary>
     internal sealed class ModEntry : Mod
     {
+
+		private ShopData catalogue_shop_data = new();
+		private ShopItemData catalogue_item_data = new();
+
+
         /*********
         ** Public methods
         *********/
@@ -51,11 +64,24 @@ namespace ModularZenGarden
 		private void load_assets(IModHelper helper)
 		{
 			SpriteManager.load_sprites(helper);
-
-			Dictionary<string, Dictionary<string, object>> types_data =
-				helper.ModContent.Load<Dictionary<string, Dictionary<string, object>>>("assets/types.json");
 			
+			catalogue_item_data = helper.ModContent.Load<ShopItemData>("assets/catalogue_item.json");
+			catalogue_shop_data = helper.ModContent.Load<ShopData>("assets/catalogue_shop.json");
+
+			// Hardcoded Garden Catalogue
+			new GardenType("catalogue", new Dict() {
+				{"width", 1L},
+				{"height", 1L},
+				{"use_default_base", true}
+			}, helper
+			);
+			
+			// Creating every WxH empty gardens (1 <= W, H <= 3)
 			GardenType.make_blank_types(helper);
+
+			// Loading gardens from assets/types.json
+			Dictionary<string, Dict> types_data =
+				helper.ModContent.Load<Dictionary<string, Dict>>("assets/types.json");
 			foreach ((string type_name, var type_data) in types_data)
 			{
 				try
@@ -79,6 +105,7 @@ namespace ModularZenGarden
 		{
 			if (e.NameWithoutLocale.IsEquivalentTo("Data/Furniture"))
 			{
+				// Adding all Zen Garden Furniture
 				e.Edit(asset =>
 				{
 					var editor = asset.AsDictionary<string, string>();
@@ -91,18 +118,29 @@ namespace ModularZenGarden
 				});
 			}
 
+			if (e.NameWithoutLocale.IsEquivalentTo("Data/Shops"))
+			{
+				// Adding the Zen Garden catalogue
+				e.Edit(asset =>
+				{
+					var data = asset.AsDictionary<string, ShopData>().Data;
+					// Adding its shop data
+					data["MZG_catalogue"] = catalogue_shop_data;
+					// Adding the furniture to Robin's shop
+					ShopData shop = data["Carpenter"];
+					shop.Items.Add(catalogue_item_data);
+				});
+			}
+
 			if (e.NameWithoutLocale.StartsWith("MZG"))
 			{
+				// Use cached textures to replace loading
 				string type_name = e.NameWithoutLocale.ToString() ?? throw new Exception("should not happen");
 				type_name = GardenType.get_type_name(type_name);
 				GardenType type = GardenType.types[type_name];
 
 				e.LoadFrom(type.get_base, AssetLoadPriority.Medium);
-				// e.LoadFromModFile<Texture2D>($"assets/default_{type.dim}", AssetLoadPriority.Medium);
-				e.Edit(asset =>
-				{
-					type.patch_image(asset.AsImage());
-				});
+				e.Edit(type.patch_image);
 			}
 		}
 

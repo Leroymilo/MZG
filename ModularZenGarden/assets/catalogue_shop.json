@@ -1,0 +1,14 @@
+{
+	"Items": [
+		{
+		"Price": 0,
+		"Id": "Default",
+		"ItemId": "ALL_ITEMS (F)",
+		"PerItemCondition": "ITEM_CONTEXT_TAG Target MZG_furniture"
+		}
+	],
+	"SalableItemTag": ["MZG_furniture"],
+	"CustomFields":{
+		"HappyHomeDesigner/Catalogue":"true"
+	}
+}

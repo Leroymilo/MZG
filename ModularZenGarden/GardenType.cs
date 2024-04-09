@@ -1,3 +1,6 @@
+using System.ComponentModel;
+using System.Data.Common;
+using System.Reflection;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI;
@@ -154,17 +157,27 @@ namespace ModularZenGarden {
 		{
 			// Building the string to patch into Content/Data/Furniture.xnb
 
-			string string_data = full_name;					// internal name
-			string_data += "/other";						// type
-			string_data += $"/{size.X} {2*size.Y}";			// texture size (probably unused)
-			string_data += $"/{size.X} {size.Y}";			// collision size
-			string_data += "/1";							// rotation
-			string_data += "/20";							// magic number price for now
-			string_data += "/2";							// placeable outdoors & indoors
-			string_data += $"/Zen Garden {dim}";			// display name
-			if (author != null) string_data += $" by {author}";
-			string_data += "/0";							// sprite index
-			string_data += $"/{full_name}";					// texture path (to direct load overwrite)
+			string display_name;
+			if (name == "catalogue")
+				display_name = "/Zen Garden Catalogue";
+			else
+			{
+				display_name = $"/Zen Garden {dim}";
+				if (author != null) display_name += $" by {author}";
+			}
+
+			string string_data = full_name;						// internal name
+			string_data += "/other";							// type
+			string_data += $"/{size.X} {2*size.Y}";				// texture size (probably unused)
+			string_data += $"/{size.X} {size.Y}";				// collision size
+			string_data += "/1";								// rotation
+			string_data += "/2000";								// price for catalog
+			string_data += "/2";								// placeable outdoors & indoors
+			string_data += display_name;						// display name
+			string_data += "/0";								// sprite index
+			string_data += $"/{full_name}";						// texture path (to direct load overwrite)
+			string_data += "/true";								// true to prevent showing in vanilla catalog
+			string_data += "/MZG_furniture";					// context tag to appear in custom catalog
 
 			return string_data;
 		}
@@ -184,16 +197,11 @@ namespace ModularZenGarden {
 			return texture;
 		}
 
-		public void patch_image(IAssetDataForImage editor)
+		public void patch_image(IAssetData asset)
 		{
 			// Patching the image used for the items
 
-			string season = SDate.Now().SeasonKey;
-
-			// editor.PatchImage(
-			// 	source: bases[season],
-			// 	patchMode: PatchMode.Replace
-			// );
+			IAssetDataForImage editor = asset.AsImage();
 
 			foreach (BorderPart border_part in get_default_border())
 			{
@@ -209,8 +217,9 @@ namespace ModularZenGarden {
 					patchMode: PatchMode.Overlay
 				);
 			}
+
 			editor.PatchImage(
-				source: features[season],
+				source: features[SDate.Now().SeasonKey],
 				patchMode: PatchMode.Overlay
 			);
 		}

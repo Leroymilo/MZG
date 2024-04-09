@@ -30,7 +30,7 @@ namespace ModularZenGarden {
 			"bottom_left",	"bottom",	"bottom_right"
 		};
 
-		public static readonly Point tile_size = new(16, 32); // SHOULD NOT CHANGE
+		public static readonly Point tile_size = new(16, 32); // DO NOT CHANGE
 
 		private static Texture2D? base_3x3;
 		private static Texture2D? base_3x3_winter;
