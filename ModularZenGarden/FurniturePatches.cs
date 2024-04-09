@@ -154,20 +154,14 @@ namespace ModularZenGarden {
 			Farmer who, bool justCheckingForActivity = false
 		)
 		{
-			Utils.log("inside checkForAction_prefix", LogLevel.Debug);
-
 			try
 			{
 				// This only applies to Zen Gardens
 				if (__instance.ItemId.Equals("MZG catalogue"))
 				{
-					Utils.log("this is the custom cataloge", LogLevel.Debug);
 					if (__instance.Location == null || justCheckingForActivity)
-					{
-						Utils.log("early exit", LogLevel.Debug);
 						return true;	// run original logic
-					}
-					Utils.log("calling try open shop menu", LogLevel.Debug);
+					
 					Utility.TryOpenShopMenu("MZG_catalogue", __instance.Location);
 					__result = true;
 
