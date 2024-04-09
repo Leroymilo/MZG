@@ -43,19 +43,11 @@ namespace ModularZenGarden {
 
 		public static void make_blank_types(IModHelper helper)
 		{
-			Dictionary<string, object> type_data = new() {
-				{"width", 1L},
-				{"height", 1L},
-				{"use_default_base", true},
-				{"use_default_feature", true}
-			};
-			new GardenType($"empty 1x1", type_data, helper);
-
 			for (long w = 1; w < 4; w++)
 			{
-				for (long h = 2; h < 4; h++)
+				for (long h = 1; h < 4; h++)
 				{
-					type_data = new() {
+					Dictionary<string, object> type_data = new() {
 						{"width", w},
 						{"height", h},
 						{"use_default_base", true},
@@ -81,8 +73,8 @@ namespace ModularZenGarden {
 			);
 			if (size.X < 1 || size.Y < 1)
 				throw new ArgumentException($"Size of type {type_name} is invalid.");
-			if (size.X > 1 && size.Y == 1)
-				throw new ArgumentException("Garden of 1 tall are not supported. Consider using multiple 1x1 gardens.");
+			// if (size.X > 1 && size.Y == 1)
+			// 	throw new ArgumentException("Garden of 1 tall are not supported. Consider using multiple 1x1 gardens.");
 			dim = $"{size.X}x{size.Y}";
 
 			// loading textures of bases and features
@@ -169,7 +161,7 @@ namespace ModularZenGarden {
 			string_data += "/1";							// rotation
 			string_data += "/20";							// magic number price for now
 			string_data += "/2";							// placeable outdoors & indoors
-			string_data += "/Zen Garden";					// display name
+			string_data += $"/Zen Garden {dim}";			// display name
 			if (author != null) string_data += $" by {author}";
 			string_data += "/0";							// sprite index
 			string_data += $"/{full_name}";					// texture path (to direct load overwrite)
@@ -330,6 +322,76 @@ namespace ModularZenGarden {
 						size, "bottom", c_value_getter(bottom + new Point(0, 1))
 					), bottom
 				));
+			}
+
+			// Nx1
+			else if (size.X > 1 && size.Y == 1)
+			{
+				Point left = Point.Zero;
+
+				// left top
+				border_parts.Add(new (
+					SpriteManager.get_border_part(
+						size, "left_top", c_value_getter(left + new Point(0, -1))
+					), left
+				));
+
+				// left
+				border_parts.Add(new (
+					SpriteManager.get_border_part(
+						size, "left", c_value_getter(left + new Point(-1, 0))
+					), left
+				));
+
+				// left bottom
+				border_parts.Add(new (
+					SpriteManager.get_border_part(
+						size, "left_bottom", c_value_getter(left + new Point(0, 1))
+					), left
+				));
+
+				// top
+				for (int x = 1; x < size.X-1; x++)
+				{
+					border_parts.Add(new (
+						SpriteManager.get_border_part(
+							size, "top", c_value_getter(new(x, -1))
+						), new(x, 0)
+					));
+				}
+
+				Point right = new(size.X-1, 0);
+
+				// right top
+				border_parts.Add(new (
+					SpriteManager.get_border_part(
+						size, "right_top", c_value_getter(right + new Point(0, -1))
+					), right
+				));
+
+				// right
+				border_parts.Add(new (
+					SpriteManager.get_border_part(
+						size, "right", c_value_getter(right + new Point(1, 0))
+					), right
+				));
+
+				// right bottom
+				border_parts.Add(new (
+					SpriteManager.get_border_part(
+						size, "right_bottom", c_value_getter(right + new Point(0, 1))
+					), right
+				));
+
+				// bottom
+				for (int x = 1; x < size.X-1; x++)
+				{
+					border_parts.Add(new (
+						SpriteManager.get_border_part(
+							size, "bottom", c_value_getter(new(x, 1))
+						), new(x, 0)
+					));
+				}
 			}
 
 			// NxN

@@ -7,5 +7,5 @@
     "Description": "Adds a set of new craftables: Zen Gardens",
     "UniqueID": "leroymilo.ModularZenGarden",
     "EntryDll": "ModularZenGarden.dll",
-    "UpdateKeys": [ "Nexus:" ]
+    "UpdateKeys": [ "Nexus:22140" ]
 }

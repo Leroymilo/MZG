@@ -7,11 +7,6 @@ namespace ModularZenGarden {
 
 	class SpriteManager
 	{
-		public static readonly string[] border_names_NxN = {
-			"top_left",		"top",		"top_right",
-			"left",						"right",
-			"bottom_left",	"bottom",	"bottom_right"
-		};
 		public static readonly string[] border_names_1x1 = {
 					"top",
 			"left",			"right",
@@ -24,6 +19,16 @@ namespace ModularZenGarden {
 			"bottom_left",				"bottom_right",
 							"bottom"
 		};
+		public static readonly string[] border_names_Nx1 = {
+					"left_top",		"top",		"right_top",
+			"left",												"right",
+					"left_bottom",	"bottom",	"right_bottom"
+		};
+		public static readonly string[] border_names_NxN = {
+			"top_left",		"top",		"top_right",
+			"left",						"right",
+			"bottom_left",	"bottom",	"bottom_right"
+		};
 
 		public static readonly Point tile_size = new(16, 32); // SHOULD NOT CHANGE
 
@@ -31,9 +36,10 @@ namespace ModularZenGarden {
 		private static Texture2D? base_3x3_winter;
 		static readonly Dictionary<Point, Dictionary<string, Texture2D>> default_bases = new();
 
-		static readonly Dictionary<string, List<Texture2D>> borders_NxN = new();
 		static readonly Dictionary<string, List<Texture2D>> borders_1x1 = new();
 		static readonly Dictionary<string, List<Texture2D>> borders_1xN = new();
+		static readonly Dictionary<string, List<Texture2D>> borders_Nx1 = new();
+		static readonly Dictionary<string, List<Texture2D>> borders_NxN = new();
 
 		static readonly Dictionary<Point, Texture2D> default_features = new();
 
@@ -202,26 +208,9 @@ namespace ModularZenGarden {
 
 		private static void load_borders(IModHelper helper)
 		{
-			// NxN
-			Texture2D spritesheet_NxN = helper.ModContent.Load<Texture2D>("assets/borders/NxN.png");
-			Point nb_sprites = new(spritesheet_NxN.Width/tile_size.X, spritesheet_NxN.Height/tile_size.Y);
-
-			for (int y = 0; y < nb_sprites.Y; y++)
-			{
-				string name = border_names_NxN[y];
-				borders_NxN[name] = new();
-
-				for (int x = 0; x < nb_sprites.X; x++)
-				{
-					borders_NxN[name].Add(
-						extract_tile(spritesheet_NxN, x, y)
-					);
-				}
-			}
-
 			// 1x1
 			Texture2D spritesheet_1x1 = helper.ModContent.Load<Texture2D>("assets/borders/1x1.png");
-			nb_sprites = new(spritesheet_1x1.Width/16, spritesheet_1x1.Height/32);
+			Point nb_sprites = new(spritesheet_1x1.Width/16, spritesheet_1x1.Height/32);
 
 			for (int y = 0; y < nb_sprites.Y; y++)
 			{
@@ -252,6 +241,40 @@ namespace ModularZenGarden {
 					);
 				}
 			}
+
+			// Nx1
+			Texture2D spritesheet_Nx1 = helper.ModContent.Load<Texture2D>("assets/borders/Nx1.png");
+			nb_sprites = new(spritesheet_Nx1.Width/16, spritesheet_Nx1.Height/32);
+
+			for (int y = 0; y < nb_sprites.Y; y++)
+			{
+				string name = border_names_Nx1[y];
+				borders_Nx1[name] = new();
+
+				for (int x = 0; x < nb_sprites.X; x++)
+				{
+					borders_Nx1[name].Add(
+						extract_tile(spritesheet_Nx1, x, y)
+					);
+				}
+			}
+
+			// NxN
+			Texture2D spritesheet_NxN = helper.ModContent.Load<Texture2D>("assets/borders/NxN.png");
+			nb_sprites = new(spritesheet_NxN.Width/tile_size.X, spritesheet_NxN.Height/tile_size.Y);
+
+			for (int y = 0; y < nb_sprites.Y; y++)
+			{
+				string name = border_names_NxN[y];
+				borders_NxN[name] = new();
+
+				for (int x = 0; x < nb_sprites.X; x++)
+				{
+					borders_NxN[name].Add(
+						extract_tile(spritesheet_NxN, x, y)
+					);
+				}
+			}
 		}
 
 		public static Texture2D get_border_part(Point size, string type, int value)
@@ -261,10 +284,12 @@ namespace ModularZenGarden {
 			
 			if (size.X == 1 && size.Y > 1)
 				return borders_1xN[type][value];
+			
+			if (size.X > 1 && size.Y == 1)
+				return borders_Nx1[type][value];
 
 			if (size.X > 1 && size.Y > 1)
 				return borders_NxN[type][value];
-			
 			
 			throw new Exception("Unsupported Garden Size.");
 		}
