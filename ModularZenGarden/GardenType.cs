@@ -51,7 +51,7 @@ namespace ModularZenGarden {
 			};
 			new GardenType($"empty 1x1", type_data, helper);
 
-			for (long w = 2; w < 4; w++)
+			for (long w = 1; w < 4; w++)
 			{
 				for (long h = 2; h < 4; h++)
 				{
@@ -81,8 +81,8 @@ namespace ModularZenGarden {
 			);
 			if (size.X < 1 || size.Y < 1)
 				throw new ArgumentException($"Size of type {type_name} is invalid.");
-			if ((size.X == 1) ^ (size.Y == 1))
-				throw new ArgumentException("Garden of 1 tile wide or tall are not supported. Consider using multiple 1x1 gardens.");
+			if (size.X > 1 && size.Y == 1)
+				throw new ArgumentException("Garden of 1 tall are not supported. Consider using multiple 1x1 gardens.");
 			dim = $"{size.X}x{size.Y}";
 
 			// loading textures of bases and features
@@ -223,26 +223,190 @@ namespace ModularZenGarden {
 			);
 		}
 
-		public void add_contacts(Garden garden, Point origin)
+		public void set_contacts(Garden garden, Point origin, bool value)
 		{
 			for (int x = 0; x < size.X; x++)
 			{
 				for (int y = 0; y < size.Y; y++)
 				{
-					garden.add_contact(origin + new Point(x, y));
+					garden.set_contact(origin + new Point(x, y), value);
 				}
 			}
 		}
 
-		public void remove_contacts(Garden garden, Point origin)
+		public void get_border(Func<Point, int> c_value_getter, List<BorderPart> border_parts)
 		{
-			for (int x = 0; x < size.X; x++)
+			border_parts.Clear();
+
+			// 1x1
+			if (size.X == 1 && size.Y == 1)
 			{
-				for (int y = 0; y < size.Y; y++)
-				{
-					garden.remove_contact(origin + new Point(x, y));
-				}
+				border_parts.Add(new(
+					SpriteManager.get_border_part(
+						size, "top", c_value_getter(new(0, -1))
+					), Point.Zero
+				));
+				border_parts.Add(new(
+					SpriteManager.get_border_part(
+						size, "left", c_value_getter(new(-1, 0))
+					), Point.Zero
+				));
+				border_parts.Add(new(
+					SpriteManager.get_border_part(
+						size, "right", c_value_getter(new(1, 0))
+					), Point.Zero
+				));
+				border_parts.Add(new(
+					SpriteManager.get_border_part(
+						size, "bottom", c_value_getter(new(0, 1))
+					), Point.Zero
+				));
 			}
+
+			// 1xN
+			else if (size.X == 1 && size.Y > 1)
+			{
+				Point top = Point.Zero;
+
+				// top
+				border_parts.Add(new (
+					SpriteManager.get_border_part(
+						size, "top", c_value_getter(top + new Point(0, -1))
+					), top
+				));
+
+				// top left
+				border_parts.Add(new (
+					SpriteManager.get_border_part(
+						size, "top_left", c_value_getter(top + new Point(-1, 0))
+					), top
+				));
+
+				// top right
+				border_parts.Add(new (
+					SpriteManager.get_border_part(
+						size, "top_right", c_value_getter(top + new Point(1, 0))
+					), top
+				));
+
+				// left & right
+				for (int y = 1; y < size.Y-1; y++)
+				{
+					Point tile = new(0, y);
+
+					border_parts.Add(new (
+						SpriteManager.get_border_part(
+							size, "left", c_value_getter(tile + new Point(-1, 0))
+						), tile
+					));
+						
+					tile.X = size.X-1;
+					border_parts.Add(new (
+						SpriteManager.get_border_part(
+							size, "right", c_value_getter(tile + new Point(1, 0))
+						), tile
+					));
+				}
+
+				Point bottom = new(0, size.Y-1);
+
+				// bottom left
+				border_parts.Add(new (
+					SpriteManager.get_border_part(
+						size, "bottom_left", c_value_getter(bottom + new Point(-1, 0))
+					), bottom
+				));
+
+				// bottom right
+				border_parts.Add(new (
+					SpriteManager.get_border_part(
+						size, "bottom_right", c_value_getter(bottom + new Point(1, 0))
+					), bottom
+				));
+
+				// bottom
+				border_parts.Add(new (
+					SpriteManager.get_border_part(
+						size, "bottom", c_value_getter(bottom + new Point(0, 1))
+					), bottom
+				));
+			}
+
+			// NxN
+			else if (size.X > 1 && size.Y > 1)
+			{
+				// top left
+				Point tile = Point.Zero;
+				border_parts.Add(new (
+					SpriteManager.get_border_part(
+						size, "top_left", c_value_getter(tile)
+					), tile
+				));
+
+				// top
+				for (tile.X = 1; tile.X < size.X-1; tile.X++)
+				{
+					border_parts.Add(new (
+						SpriteManager.get_border_part(
+							size, "top", c_value_getter(tile)
+						), tile
+					));
+				}
+
+				// top right
+				tile.X = size.X-1;
+				border_parts.Add(new (
+					SpriteManager.get_border_part(
+						size, "top_right", c_value_getter(tile)
+					), tile
+				));
+
+				// left & right
+				for (tile.Y = 1; tile.Y < size.Y-1; tile.Y++)
+				{
+					tile.X = 0;
+					border_parts.Add(new (
+						SpriteManager.get_border_part(
+							size, "left", c_value_getter(tile)
+						), tile
+					));
+						
+					tile.X = size.X-1;
+					border_parts.Add(new (
+						SpriteManager.get_border_part(
+							size, "right", c_value_getter(tile)
+						), tile
+					));
+				}
+
+				// bottom left
+				tile.X = 0; tile.Y = size.Y-1;
+				border_parts.Add(new (
+					SpriteManager.get_border_part(
+						size, "bottom_left", c_value_getter(tile)
+					), tile
+				));
+
+				// bottom
+				for (tile.X = 1; tile.X < size.X-1; tile.X++)
+				{
+					border_parts.Add(new (
+						SpriteManager.get_border_part(
+							size, "bottom", c_value_getter(tile)
+						), tile
+					));
+				}
+
+				// bottom right
+				tile.X = size.X-1;
+				border_parts.Add(new (
+					SpriteManager.get_border_part(
+						size, "bottom_right", c_value_getter(tile)
+					), tile
+				));
+			}
+
+			else throw new Exception("Unsupported Garden Size.");
 		}
 
 		public List<BorderPart> get_default_border()
@@ -252,38 +416,7 @@ namespace ModularZenGarden {
 
 			List<BorderPart> border_parts = new();
 
-			if (size.X > 1 && size.Y > 1)
-			{
-				border_parts.Add(new(SpriteManager.get_border(size, "top_left", 0), Point.Zero));
-
-				for (int x = 1; x < size.X-1; x++)
-					border_parts.Add(new(SpriteManager.get_border(size, "top", 0), new(x, 0)));
-
-				border_parts.Add(new(SpriteManager.get_border(size, "top_right", 0), new(size.X-1, 0)));
-
-				for (int y = 1; y < size.Y-1; y++)
-				{
-					border_parts.Add(new(SpriteManager.get_border(size, "left", 0), new(0, y)));
-					border_parts.Add(new(SpriteManager.get_border(size, "right", 0), new(size.X-1, y)));
-				}
-				
-				border_parts.Add(new(SpriteManager.get_border(size, "bottom_left", 0), new(0, size.Y-1)));
-
-				for (int x = 1; x < size.X-1; x++)
-					border_parts.Add(new(SpriteManager.get_border(size, "bottom", 0), new(x, size.Y-1)));
-
-				border_parts.Add(new(SpriteManager.get_border(size, "bottom_right", 0), new(size.X-1, size.Y-1)));
-			}
-
-			else if (size.X == 1 && size.Y == 1)
-			{
-				border_parts.Add(new(SpriteManager.get_border(size, "top", 0), Point.Zero));
-				border_parts.Add(new(SpriteManager.get_border(size, "left", 0), Point.Zero));
-				border_parts.Add(new(SpriteManager.get_border(size, "right", 0), Point.Zero));
-				border_parts.Add(new(SpriteManager.get_border(size, "bottom", 0), Point.Zero));
-			}
-
-			else throw new Exception("Unsupported Garden Size.");
+			get_border(tile => {return 0;}, border_parts);
 
 			default_borders[size] = border_parts;
 			return border_parts;

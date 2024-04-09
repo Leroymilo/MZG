@@ -17,6 +17,13 @@ namespace ModularZenGarden {
 			"left",			"right",
 					"bottom"
 		};
+		public static readonly string[] border_names_1xN = {
+							"top",
+			"top_left",					"top_right",
+			"left",						"right",
+			"bottom_left",				"bottom_right",
+							"bottom"
+		};
 
 		public static readonly Point tile_size = new(16, 32); // SHOULD NOT CHANGE
 
@@ -26,6 +33,7 @@ namespace ModularZenGarden {
 
 		static readonly Dictionary<string, List<Texture2D>> borders_NxN = new();
 		static readonly Dictionary<string, List<Texture2D>> borders_1x1 = new();
+		static readonly Dictionary<string, List<Texture2D>> borders_1xN = new();
 
 		static readonly Dictionary<Point, Texture2D> default_features = new();
 
@@ -227,15 +235,36 @@ namespace ModularZenGarden {
 					);
 				}
 			}
+
+			// 1xN
+			Texture2D spritesheet_1xN = helper.ModContent.Load<Texture2D>("assets/borders/1xN.png");
+			nb_sprites = new(spritesheet_1xN.Width/16, spritesheet_1xN.Height/32);
+
+			for (int y = 0; y < nb_sprites.Y; y++)
+			{
+				string name = border_names_1xN[y];
+				borders_1xN[name] = new();
+
+				for (int x = 0; x < nb_sprites.X; x++)
+				{
+					borders_1xN[name].Add(
+						extract_tile(spritesheet_1xN, x, y)
+					);
+				}
+			}
 		}
 
-		public static Texture2D get_border(Point size, string type, int value)
+		public static Texture2D get_border_part(Point size, string type, int value)
 		{
+			if (size.X == 1 && size.Y == 1)
+				return borders_1x1[type][value];
+			
+			if (size.X == 1 && size.Y > 1)
+				return borders_1xN[type][value];
+
 			if (size.X > 1 && size.Y > 1)
 				return borders_NxN[type][value];
 			
-			if (size.X == 1 && size.Y == 1)
-				return borders_1x1[type][value];
 			
 			throw new Exception("Unsupported Garden Size.");
 		}

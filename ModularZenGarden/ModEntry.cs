@@ -58,9 +58,16 @@ namespace ModularZenGarden
 			GardenType.make_blank_types(helper);
 			foreach ((string type_name, var type_data) in types_data)
 			{
-				new GardenType(
-					type_name, type_data, helper
-				);
+				try
+				{
+					new GardenType(
+						type_name, type_data, helper
+					);
+				}
+				catch (Exception ex)
+				{
+					Monitor.Log($"Could not load Garden type {type_name} : {ex}", LogLevel.Warn);
+				}
 			}
 		}
 

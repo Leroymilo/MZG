@@ -29,120 +29,15 @@ namespace ModularZenGarden {
 			}
 		}
 
-		public void add_contact(Point tile)
+		public void set_contact(Point tile, bool has_contact)
 		{
 			if (contacts.ContainsKey(tile))
-				contacts[tile] = true;
-		}
-
-		public void remove_contact(Point tile)
-		{
-			if (contacts.ContainsKey(tile))
-				contacts[tile] = false;
+				contacts[tile] = has_contact;
 		}
 	
 		public void update_texture()
 		{
-			border_parts.Clear();
-
-			if (type.size.X > 1 && type.size.Y > 1)
-			{
-				// top left
-				Point tile = Point.Zero;
-				border_parts.Add(new (
-					SpriteManager.get_border(
-						type.size, "top_left", get_contact_value(tile)
-					), tile
-				));
-
-				// top
-				for (tile.X = 1; tile.X < type.size.X-1; tile.X++)
-				{
-					border_parts.Add(new (
-						SpriteManager.get_border(
-							type.size, "top", get_contact_value(tile)
-						), tile
-					));
-				}
-
-				// top right
-				tile.X = type.size.X-1;
-				border_parts.Add(new (
-					SpriteManager.get_border(
-						type.size, "top_right", get_contact_value(tile)
-					), tile
-				));
-
-				// left & right
-				for (tile.Y = 1; tile.Y < type.size.Y-1; tile.Y++)
-				{
-					tile.X = 0;
-					border_parts.Add(new (
-						SpriteManager.get_border(
-							type.size, "left", get_contact_value(tile)
-						), tile
-					));
-						
-					tile.X = type.size.X-1;
-					border_parts.Add(new (
-						SpriteManager.get_border(
-							type.size, "right", get_contact_value(tile)
-						), tile
-					));
-				}
-
-				// bottom left
-				tile.X = 0; tile.Y = type.size.Y-1;
-				border_parts.Add(new (
-					SpriteManager.get_border(
-						type.size, "bottom_left", get_contact_value(tile)
-					), tile
-				));
-
-				// bottom
-				for (tile.X = 1; tile.X < type.size.X-1; tile.X++)
-				{
-					border_parts.Add(new (
-						SpriteManager.get_border(
-							type.size, "bottom", get_contact_value(tile)
-						), tile
-					));
-				}
-
-				// bottom right
-				tile.X = type.size.X-1;
-				border_parts.Add(new (
-					SpriteManager.get_border(
-						type.size, "bottom_right", get_contact_value(tile)
-					), tile
-				));
-			}
-
-			else if (type.size.X == 1 && type.size.Y == 1)
-			{
-				border_parts.Add(new(
-					SpriteManager.get_border(
-						type.size, "top", get_contact_value(new(0, -1))
-					), Point.Zero
-				));
-				border_parts.Add(new(
-					SpriteManager.get_border(
-						type.size, "left", get_contact_value(new(-1, 0))
-					), Point.Zero
-				));
-				border_parts.Add(new(
-					SpriteManager.get_border(
-						type.size, "right", get_contact_value(new(1, 0))
-					), Point.Zero
-				));
-				border_parts.Add(new(
-					SpriteManager.get_border(
-						type.size, "bottom", get_contact_value(new(0, 1))
-					), Point.Zero
-				));
-			}
-
-			else throw new Exception("Unsupported Garden Size.");
+			type.get_border(get_contact_value, border_parts);
 		}
 
 		private int get_contact_value(Point tile)

@@ -27,7 +27,7 @@ namespace ModularZenGarden {
 			foreach (Garden garden_2 in neighbors)
 			{
 				Point delta = garden_2.position - garden.position;
-				garden.type.remove_contacts(garden_2, Point.Zero - delta);
+				garden.type.set_contacts(garden_2, Point.Zero - delta, false);
 			}
 
 			to_update.UnionWith(neighbors);
@@ -42,8 +42,8 @@ namespace ModularZenGarden {
 			foreach (Garden garden_2 in neighbors)
 			{
 				Point delta = garden_2.position - garden.position;
-				garden_2.type.add_contacts(garden, delta);
-				garden.type.add_contacts(garden_2, Point.Zero - delta);
+				garden_2.type.set_contacts(garden, delta, true);
+				garden.type.set_contacts(garden_2, Point.Zero - delta, true);
 			}
 
 			gardens[garden.position] = garden;
