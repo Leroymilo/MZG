@@ -7,8 +7,6 @@
 		"PerItemCondition": "ITEM_CONTEXT_TAG Target MZG_furniture"
 		}
 	],
-	"SalableItemTag": ["MZG_furniture"],
-	"CustomFields":{
-		"HappyHomeDesigner/Catalogue":"true"
-	}
+	"CustomFields":{ "HappyHomeDesigner/Catalogue":"true" },
+	"Owners": [{ "Name": "AnyOrNone" }]
 }

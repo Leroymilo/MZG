@@ -9,6 +9,8 @@ namespace ModularZenGarden {
 
 	internal class FurniturePatches {
 
+		#region patch_draw
+
 		static private SpriteBatch? sprite_batch;
 		static private Vector2 position;
 		static private Rectangle value;
@@ -19,8 +21,7 @@ namespace ModularZenGarden {
 		// patches need to be static!
 		internal static bool draw_prefix(
 			Furniture __instance,
-			SpriteBatch spriteBatch,
-			int x, int y, float alpha = 1f
+			SpriteBatch spriteBatch, int x, int y, float alpha = 1f
 		)
 		{
 			try
@@ -143,6 +144,45 @@ namespace ModularZenGarden {
 				effects, depth
 			);
 		}
+	
+		#endregion
+	
+		#region patch_checkForAction
+
+		internal static bool checkForAction_prefix(
+			Furniture __instance, ref bool __result,
+			Farmer who, bool justCheckingForActivity = false
+		)
+		{
+			Utils.log("inside checkForAction_prefix", LogLevel.Debug);
+
+			try
+			{
+				// This only applies to Zen Gardens
+				if (__instance.ItemId.Equals("MZG catalogue"))
+				{
+					Utils.log("this is the custom cataloge", LogLevel.Debug);
+					if (__instance.Location == null || justCheckingForActivity)
+					{
+						Utils.log("early exit", LogLevel.Debug);
+						return true;	// run original logic
+					}
+					Utils.log("calling try open shop menu", LogLevel.Debug);
+					Utility.TryOpenShopMenu("MZG_catalogue", __instance.Location);
+					__result = true;
+
+					return false; // don't run original logic
+				}
+				return true; // run original logic
+			}
+			catch (Exception ex)
+			{
+				Utils.log($"Failed in {nameof(draw_prefix)}:\n{ex}", LogLevel.Error);
+				return true; // run original logic
+			}
+		}
+
+		#endregion
 	}
 
 }

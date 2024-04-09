@@ -1,14 +1,8 @@
 ﻿using System.Reflection;
 using HarmonyLib;
-using Microsoft.Xna.Framework;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewValley.Objects;
-using StardewValley;
-using xTile;
-using xTile.Tiles;
-using xTile.Layers;
-using xTile.Dimensions;
 using StardewValley.GameData.Shops;
 
 namespace ModularZenGarden
@@ -35,15 +29,15 @@ namespace ModularZenGarden
 			helper.Events.World.FurnitureListChanged += on_furniture_list_changed;
 			helper.Events.Player.Warped += on_player_warped;
 
-			patch_furniture_draw();
+			var harmony = new Harmony(ModManifest.UniqueID);
+			patch_furniture_draw(harmony);
+			patch_furniture_checkForAction(harmony);
 
 			load_assets(helper);
         }
 
-		private void patch_furniture_draw()
+		private void patch_furniture_draw(Harmony harmony)
 		{
-			var harmony = new Harmony(ModManifest.UniqueID);
-
 			// fetching Furniture.draw MethodInfo
 			MethodInfo? original_method = typeof(Furniture)
 				.GetMethods()
@@ -57,6 +51,25 @@ namespace ModularZenGarden
 				prefix: new HarmonyMethod(
 					typeof(FurniturePatches),
 					nameof(FurniturePatches.draw_prefix)
+				)
+			);
+		}
+
+		private void patch_furniture_checkForAction(Harmony harmony)
+		{
+			// fetching Furniture.checkForAction MethodInfo
+			MethodInfo? original_method = typeof(Furniture)
+				.GetMethods()
+				.Where(x => x.Name == "checkForAction")
+				.Where(x => x.DeclaringType != null
+					&& x.DeclaringType.Name == "Furniture")
+				.FirstOrDefault();
+			
+			harmony.Patch(
+				original: original_method,
+				prefix: new HarmonyMethod(
+					typeof(FurniturePatches),
+					nameof(FurniturePatches.checkForAction_prefix)
 				)
 			);
 		}
@@ -128,7 +141,8 @@ namespace ModularZenGarden
 					data["MZG_catalogue"] = catalogue_shop_data;
 					// Adding the furniture to Robin's shop
 					ShopData shop = data["Carpenter"];
-					shop.Items.Add(catalogue_item_data);
+					shop.Items.Insert(50, catalogue_item_data);
+					// 50 is right after the Furniture Catalogue, it looks nice
 				});
 			}
 
