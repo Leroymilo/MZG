@@ -102,21 +102,24 @@ namespace ModularZenGarden {
 				season = "other";
 			}
 			if (from_ == null) throw new NullReferenceException("Textures not loaded");
-				
+			
+			int width = tile_size.X * size.X, height = tile_size.Y * size.Y;
+
 			Texture2D texture = new(
 				GameRunner.instance.GraphicsDevice,
-				tile_size.X * size.X,
-				tile_size.Y * size.Y
+				width, height
 			);
+
+			Color[] data = Enumerable.Repeat(Color.Transparent, width*height).ToArray();
+			set_data(texture, Point.Zero, width, height, data);
 
 			Point true_origin = new(0, size.Y * (tile_size.Y - tile_size.X) - 2);
 			Point pixel_origin = true_origin;
-			Point true_end = new(tile_size.X * size.X, tile_size.Y * size.Y - 2);
-			Color[] data;
+			Point true_end = new(width, height - 2);
 
 			// Case : new texture is wider than original texture
 			// Repeating original texture in width
-			int height = Math.Min(true_end.Y - true_origin.Y, from_.Height);
+			height = Math.Min(true_end.Y - true_origin.Y, from_.Height);
 
 			if (true_end.X - pixel_origin.X > from_.Width)
 			{	
@@ -132,7 +135,7 @@ namespace ModularZenGarden {
 			}
 
 			// Completing width
-			int width = true_end.X - pixel_origin.X;
+			width = true_end.X - pixel_origin.X;
 			// Getting data from original texture
 			data = get_data(from_, width, height);
 
