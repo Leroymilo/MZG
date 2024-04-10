@@ -4,6 +4,7 @@ using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewValley.Objects;
 using StardewValley.GameData.Shops;
+using ContentPatcher;
 
 namespace ModularZenGarden
 {
@@ -17,9 +18,6 @@ namespace ModularZenGarden
 		private ShopItemData catalogue_item_data = new();
 
 
-        /*********
-        ** Public methods
-        *********/
         /// <summary>The mod entry point, called after the mod is first loaded.</summary>
         /// <param name="helper">Provides simplified APIs for writing mods.</param>
         public override void Entry(IModHelper helper)
@@ -28,6 +26,7 @@ namespace ModularZenGarden
 			helper.Events.Content.AssetRequested += on_asset_requested;
 			helper.Events.World.FurnitureListChanged += on_furniture_list_changed;
 			helper.Events.Player.Warped += on_player_warped;
+			helper.Events.GameLoop.GameLaunched += on_game_launched;
 
 			var harmony = new Harmony(ModManifest.UniqueID);
 			patch_furniture_draw(harmony);
@@ -110,6 +109,31 @@ namespace ModularZenGarden
 			}
 		}
 
+
+		/// <inheritdoc cref="IGameLoopEvents.GameLaunched"/>
+		/// <param name="sender">The event sender.</param>
+		/// <param name="e">The event data.</param>
+		private void on_game_launched(object? sender, GameLaunchedEventArgs e)
+		{
+			string CP_id = "leroymilo.USJB";
+			// check if a mod is loaded
+			if (Helper.ModRegistry.IsLoaded(CP_id))
+			{
+				Monitor.Log("Found USJB loaded", LogLevel.Debug);
+				
+				// get info for a mod
+				IModInfo mod = Helper.ModRegistry.Get(CP_id)
+					?? throw new NullReferenceException("can't get mod info");
+				Monitor.Log("Found USJB info", LogLevel.Debug);
+				Monitor.Log($"is content pack? {mod.IsContentPack}", LogLevel.Debug);
+				Monitor.Log("Manifest :", LogLevel.Debug);
+				IManifest manifest = mod.Manifest; // name, description, version, etc
+				Monitor.Log($"\tdescription :{manifest.Description}", LogLevel.Debug);
+				Monitor.Log($"\tversion :{manifest.Version}", LogLevel.Debug);
+
+				// TODO : overwrite obelisks
+			}
+		}
 
 		/// <inheritdoc cref="IContentEvents.AssetRequested"/>
 		/// <param name="sender">The event sender.</param>
