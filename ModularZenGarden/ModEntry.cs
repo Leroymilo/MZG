@@ -4,7 +4,6 @@ using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewValley.Objects;
 using StardewValley.GameData.Shops;
-using ContentPatcher;
 
 namespace ModularZenGarden
 {
