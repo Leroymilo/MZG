@@ -213,13 +213,13 @@ namespace ModularZenGarden
 
 			foreach (Building building in e.Added)
 			{
-				if (!BuildingManager.is_garden(building)) continue;
+				if (!GardenType.is_garden(building)) continue;
 				GardenCache.add_garden(building);
 			}
 			
 			foreach (Building building in e.Removed)
 			{
-				if (!BuildingManager.is_garden(building)) continue;
+				if (!GardenType.is_garden(building)) continue;
 				GardenCache.remove_garden(building);
 			}
 
