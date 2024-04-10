@@ -1,4 +1,5 @@
 using Microsoft.Xna.Framework;
+using StardewValley.Buildings;
 using StardewValley.Objects;
 
 namespace ModularZenGarden {
@@ -17,14 +18,31 @@ namespace ModularZenGarden {
 			catalogues.Clear();
 		}
 
-		public static bool remove_garden(Furniture furniture)
+		public static void remove_garden(Furniture furniture)
 		{
-			// Returns true if the furniture is a catalogue
-
-			Garden? garden = get_garden(furniture) ?? throw new NullReferenceException(
+			Garden? garden = get_garden(furniture)
+				?? throw new NullReferenceException(
 					$"No registered garden matched at {Utils.get_pos(furniture)}."
 				);
 			
+			remove_garden(garden);
+
+			if (garden.type.name == "catalogue")
+				catalogues.Remove(garden.position);
+		}
+
+		public static void remove_garden(Building building)
+		{
+			Garden? garden = get_garden(building)
+				?? throw new NullReferenceException(
+					$"No registered garden matched at {Utils.get_pos(building)}."
+				);
+			
+			remove_garden(garden);
+		}
+
+		private static void remove_garden(Garden garden)
+		{
 			gardens.Remove(garden.position);
 
 			HashSet<Garden> neighbors = get_neighbors(garden);
@@ -36,21 +54,27 @@ namespace ModularZenGarden {
 			}
 
 			to_update.UnionWith(neighbors);
-
-			if (garden.type.name == "catalogue")
-			{
-				catalogues.Remove(garden.position);
-				return true;
-			}
-			return false;
 		}
 
-		public static bool add_garden(Furniture furniture)
+		public static void add_garden(Furniture furniture)
 		{
-			// Returns true if the furniture is a catalogue
-
 			Garden garden = new(furniture);
 
+			add_garden(garden);
+
+			if (garden.type.name == "catalogue")
+				catalogues.Add(garden.position);
+		}
+
+		public static void add_garden(Building building)
+		{
+			Garden garden = new(building);
+
+			add_garden(garden);
+		}
+
+		private static void add_garden(Garden garden)
+		{
 			HashSet<Garden> neighbors = get_neighbors(garden);
 
 			foreach (Garden garden_2 in neighbors)
@@ -64,13 +88,6 @@ namespace ModularZenGarden {
 			
 			to_update.UnionWith(neighbors);
 			to_update.Add(garden);
-
-			if (garden.type.name == "catalogue")
-			{
-				catalogues.Add(garden.position);
-				return true;
-			}
-			return false;
 		}
 
 		public static void update_textures()
@@ -85,8 +102,20 @@ namespace ModularZenGarden {
 
 		public static Garden? get_garden(Furniture furniture)
 		{
-			Point base_pos = Utils.get_pos(furniture);
 			GardenType type = GardenType.get_type(furniture);
+			Point base_pos = Utils.get_pos(furniture);
+			return get_garden(type, base_pos);
+		}
+
+		public static Garden? get_garden(Building building)
+		{
+			GardenType type = GardenType.get_type(building);
+			Point base_pos = Utils.get_pos(building);
+			return get_garden(type, base_pos);
+		}
+
+		private static Garden? get_garden(GardenType type, Point base_pos)
+		{
 			// Removing a garden from a tile that's not its top left tile will move it
 			// To find it anyway, its necessary to search around the position
 			for (int x = 0; x < type.size.X; x++)

@@ -1,11 +1,13 @@
 using System.ComponentModel;
 using System.Data.Common;
+using System.Net;
 using System.Reflection;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI;
 using StardewModdingAPI.Utilities;
 using StardewValley;
+using StardewValley.Buildings;
 using StardewValley.Objects;
 
 namespace ModularZenGarden {
@@ -33,6 +35,21 @@ namespace ModularZenGarden {
 
 		public static readonly Dictionary<string, GardenType> types = new();
 		public static readonly Dictionary<Point, List<BorderPart>> default_borders = new();
+		public static HashSet<string> building_names = new() {
+			"Earth Obelisk",
+			"Water Obelisk",
+			"Desert Obelisk"
+		};	// Excludes the Island Obelisk for now
+
+		public static bool is_garden(Furniture furniture)
+		{
+			return furniture.ItemId.StartsWith("MZG");
+		}
+
+		public static bool is_garden(Building building)
+		{
+			return building_names.Contains(building.buildingType.Value);
+		}
 
 		public static string get_type_name(string full_name)
 		{
@@ -42,6 +59,21 @@ namespace ModularZenGarden {
 		public static GardenType get_type(Furniture furniture)
 		{
 			return types[get_type_name(furniture.ItemId)];
+		}
+
+		public static GardenType get_type(Building building)
+		{
+			switch (building.buildingType.Value)
+			{
+				case "Earth Obelisk":
+					return types["stones"];
+				case "Water Obelisk":
+					return types["tree"];
+				case "Desert Obelisk":
+					return types["lantern"];
+				default:
+					throw new InvalidDataException("This building type has no garden type associated.");
+			}
 		}
 
 		public static void make_blank_types(IModHelper helper)

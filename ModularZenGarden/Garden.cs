@@ -1,4 +1,5 @@
 using Microsoft.Xna.Framework;
+using StardewValley.Buildings;
 using StardewValley.Objects;
 
 namespace ModularZenGarden {
@@ -15,7 +16,18 @@ namespace ModularZenGarden {
 		{
 			position = Utils.get_pos(furniture);
 			type = GardenType.get_type(furniture);
+			fill_contacts();
+		}
 
+		public Garden(Building building)
+		{
+			position = Utils.get_pos(building);
+			type = GardenType.get_type(building);
+			fill_contacts();
+		}
+
+		private void fill_contacts()
+		{
 			// building the dictionary of contacts around the Garden
 			for (int x = -1; x <= type.size.X; x++)
 			{

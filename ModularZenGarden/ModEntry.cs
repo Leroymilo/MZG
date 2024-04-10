@@ -4,6 +4,7 @@ using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewValley.Objects;
 using StardewValley.GameData.Shops;
+using StardewValley.Buildings;
 
 namespace ModularZenGarden
 {
@@ -13,17 +14,21 @@ namespace ModularZenGarden
     internal sealed class ModEntry : Mod
     {
 
+		private IModHelper helper;
 		private ShopData catalogue_shop_data = new();
 		private ShopItemData catalogue_item_data = new();
 
+		public ModEntry(IModHelper h) { helper = h; }
 
         /// <summary>The mod entry point, called after the mod is first loaded.</summary>
         /// <param name="helper">Provides simplified APIs for writing mods.</param>
         public override void Entry(IModHelper helper)
         {
 			Utils.monitor = Monitor;
+			this.helper = helper;
 			helper.Events.Content.AssetRequested += on_asset_requested;
 			helper.Events.World.FurnitureListChanged += on_furniture_list_changed;
+			helper.Events.World.BuildingListChanged += on_building_list_changed;
 			helper.Events.Player.Warped += on_player_warped;
 			helper.Events.GameLoop.GameLaunched += on_game_launched;
 
@@ -31,7 +36,7 @@ namespace ModularZenGarden
 			patch_furniture_draw(harmony);
 			patch_furniture_checkForAction(harmony);
 
-			load_assets(helper);
+			load_assets();
         }
 
 		private void patch_furniture_draw(Harmony harmony)
@@ -72,7 +77,7 @@ namespace ModularZenGarden
 			);
 		}
 
-		private void load_assets(IModHelper helper)
+		private void load_assets()
 		{
 			SpriteManager.load_sprites(helper);
 			
@@ -118,19 +123,7 @@ namespace ModularZenGarden
 			// check if a mod is loaded
 			if (Helper.ModRegistry.IsLoaded(CP_id))
 			{
-				Monitor.Log("Found USJB loaded", LogLevel.Debug);
-				
-				// get info for a mod
-				IModInfo mod = Helper.ModRegistry.Get(CP_id)
-					?? throw new NullReferenceException("can't get mod info");
-				Monitor.Log("Found USJB info", LogLevel.Debug);
-				Monitor.Log($"is content pack? {mod.IsContentPack}", LogLevel.Debug);
-				Monitor.Log("Manifest :", LogLevel.Debug);
-				IManifest manifest = mod.Manifest; // name, description, version, etc
-				Monitor.Log($"\tdescription :{manifest.Description}", LogLevel.Debug);
-				Monitor.Log($"\tversion :{manifest.Version}", LogLevel.Debug);
-
-				// TODO : overwrite obelisks
+				Utils.apply_to_obelisks = true;
 			}
 		}
 
@@ -169,9 +162,14 @@ namespace ModularZenGarden
 				});
 			}
 
+			if (e.NameWithoutLocale.IsEquivalentTo("Data/Buildings") && Utils.apply_to_obelisks)
+			{
+				// Adding DrawLayers to obelisks
+			}
+
 			if (e.NameWithoutLocale.StartsWith("MZG"))
 			{
-				// Use cached textures to replace loading
+				// Use cached textures to replace loading of Furniture textures
 				string type_name = e.NameWithoutLocale.ToString() ?? throw new Exception("should not happen");
 				type_name = GardenType.get_type_name(type_name);
 				GardenType type = GardenType.types[type_name];
@@ -203,6 +201,31 @@ namespace ModularZenGarden
 			GardenCache.update_textures();
 		}
 
+        /// <inheritdoc cref="IWorldEvents.BuildingListChanged"/>
+        /// <param name="sender">The event sender.</param>
+        /// <param name="e">The event data.</param>
+		private void on_building_list_changed(object? sender, BuildingListChangedEventArgs e)
+		{
+			// This is probably useless since you edit buildings from shops,
+			// but I leave it just in case for mods allowing to edit buildings like furniture
+
+			if (!e.IsCurrentLocation) return;	// ignoring furniture placed outside current location
+
+			foreach (Building building in e.Added)
+			{
+				if (!BuildingManager.is_garden(building)) continue;
+				GardenCache.add_garden(building);
+			}
+			
+			foreach (Building building in e.Removed)
+			{
+				if (!BuildingManager.is_garden(building)) continue;
+				GardenCache.remove_garden(building);
+			}
+
+			GardenCache.update_textures();
+		}
+
 		/// <inheritdoc cref="IPlayerEvents.Warped"/>
         /// <param name="sender">The event sender.</param>
         /// <param name="e">The event data.</param>
@@ -213,8 +236,13 @@ namespace ModularZenGarden
 			GardenCache.clear();
 
 			foreach (Furniture furniture in e.NewLocation.furniture) {
-				if (!furniture.ItemId.StartsWith("MZG")) continue;
+				if (!GardenType.is_garden(furniture)) continue;
 				GardenCache.add_garden(furniture);
+			}
+
+			foreach (Building building in e.NewLocation.buildings) {
+				if (!GardenType.is_garden(building)) continue;
+				GardenCache.add_garden(building);
 			}
 			
 			GardenCache.update_textures();
