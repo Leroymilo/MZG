@@ -3,7 +3,6 @@ using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI;
 using StardewModdingAPI.Utilities;
 using StardewValley;
-using StardewValley.Buildings;
 using StardewValley.Objects;
 
 namespace ModularZenGarden {
@@ -158,7 +157,7 @@ namespace ModularZenGarden {
 			try
 			{
 				// This only applies to Zen Gardens
-				if (__instance.ItemId.Equals("MZG catalogue"))
+				if (__instance.ItemId.Equals("MZG_F catalogue"))
 				{
 					if (__instance.Location == null || justCheckingForActivity)
 						return true;	// run original logic

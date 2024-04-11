@@ -8,24 +8,15 @@ using StardewValley.Buildings;
 
 namespace ModularZenGarden
 {
-	using Dict = Dictionary<string, object>;
 
     /// <summary>The mod entry point.</summary>
     internal sealed class ModEntry : Mod
     {
-
-		private IModHelper helper;
-		private ShopData catalogue_shop_data = new();
-		private ShopItemData catalogue_item_data = new();
-
-		public ModEntry(IModHelper h) { helper = h; }
-
         /// <summary>The mod entry point, called after the mod is first loaded.</summary>
         /// <param name="helper">Provides simplified APIs for writing mods.</param>
         public override void Entry(IModHelper helper)
         {
 			Utils.monitor = Monitor;
-			this.helper = helper;
 			helper.Events.Content.AssetRequested += on_asset_requested;
 			helper.Events.World.FurnitureListChanged += on_furniture_list_changed;
 			helper.Events.World.BuildingListChanged += on_building_list_changed;
@@ -36,7 +27,7 @@ namespace ModularZenGarden
 			patch_furniture_draw(harmony);
 			patch_furniture_checkForAction(harmony);
 
-			load_assets();
+			load_assets(helper);
         }
 
 		private void patch_furniture_draw(Harmony harmony)
@@ -77,40 +68,10 @@ namespace ModularZenGarden
 			);
 		}
 
-		private void load_assets()
+		private void load_assets(IModHelper helper)
 		{
 			SpriteManager.load_sprites(helper);
-			
-			catalogue_item_data = helper.ModContent.Load<ShopItemData>("assets/catalogue_item.json");
-			catalogue_shop_data = helper.ModContent.Load<ShopData>("assets/catalogue_shop.json");
-
-			// Hardcoded Garden Catalogue
-			new GardenType("catalogue", new Dict() {
-				{"width", 1L},
-				{"height", 1L},
-				{"use_default_base", true}
-			}, helper
-			);
-			
-			// Creating every WxH empty gardens (1 <= W, H <= 3)
-			GardenType.make_blank_types(helper);
-
-			// Loading gardens from assets/types.json
-			Dictionary<string, Dict> types_data =
-				helper.ModContent.Load<Dictionary<string, Dict>>("assets/types.json");
-			foreach ((string type_name, var type_data) in types_data)
-			{
-				try
-				{
-					new GardenType(
-						type_name, type_data, helper
-					);
-				}
-				catch (Exception ex)
-				{
-					Monitor.Log($"Could not load Garden type {type_name} : {ex}", LogLevel.Warn);
-				}
-			}
+			GardenType.load_types(helper);
 		}
 
 
@@ -135,44 +96,26 @@ namespace ModularZenGarden
 			if (e.NameWithoutLocale.IsEquivalentTo("Data/Furniture"))
 			{
 				// Adding all Zen Garden Furniture
-				e.Edit(asset =>
-				{
-					var editor = asset.AsDictionary<string, string>();
-					foreach ((string type_name, GardenType type) in GardenType.types)
-					{
-						string full_name = "MZG " + type_name;
-						string data = type.get_string_data(full_name);
-						editor.Data[full_name] = data;
-					}
-				});
+				e.Edit(GardenType.patch_furniture_data);
 			}
 
 			if (e.NameWithoutLocale.IsEquivalentTo("Data/Shops"))
 			{
 				// Adding the Zen Garden catalogue
-				e.Edit(asset =>
-				{
-					var data = asset.AsDictionary<string, ShopData>().Data;
-					// Adding its shop data
-					data["MZG_catalogue"] = catalogue_shop_data;
-					// Adding the furniture to Robin's shop
-					ShopData shop = data["Carpenter"];
-					shop.Items.Insert(50, catalogue_item_data);
-					// 50 is right after the Furniture Catalogue, it looks nice
-				});
+				e.Edit(GardenType.patch_shop_data);
 			}
 
-			if (e.NameWithoutLocale.IsEquivalentTo("Data/Buildings") && Utils.apply_to_obelisks)
+			if (e.NameWithoutLocale.IsEquivalentTo("Data/Buildings"))
 			{
-				// Adding DrawLayers to obelisks
+				// Adding Sprites to obelisks
+				e.Edit(GardenType.patch_building_data);
 			}
 
-			if (e.NameWithoutLocale.StartsWith("MZG"))
+			if (e.NameWithoutLocale.StartsWith("MZG_F"))
 			{
 				// Use cached textures to replace loading of Furniture textures
 				string type_name = e.NameWithoutLocale.ToString() ?? throw new Exception("should not happen");
-				type_name = GardenType.get_type_name(type_name);
-				GardenType type = GardenType.types[type_name];
+				GardenType type = GardenType.get_type(type_name);
 
 				e.LoadFrom(type.get_base, AssetLoadPriority.Medium);
 				e.Edit(type.patch_image);

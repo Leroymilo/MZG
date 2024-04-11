@@ -1,3 +1,4 @@
+using System.Data;
 using Microsoft.Xna.Framework;
 using StardewValley.Buildings;
 using StardewValley.Objects;
@@ -12,22 +13,11 @@ namespace ModularZenGarden {
 		private readonly Dictionary<Point, bool> contacts = new();
 		public readonly List<BorderPart> border_parts = new();
 
-		public Garden(Furniture furniture)
+		private Garden(Point pos, GardenType g_type)
 		{
-			position = Utils.get_pos(furniture);
-			type = GardenType.get_type(furniture);
-			fill_contacts();
-		}
-
-		public Garden(Building building)
-		{
-			position = Utils.get_pos(building);
-			type = GardenType.get_type(building);
-			fill_contacts();
-		}
-
-		private void fill_contacts()
-		{
+			position = pos;
+			type = g_type;
+			
 			// building the dictionary of contacts around the Garden
 			for (int x = -1; x <= type.size.X; x++)
 			{
@@ -39,6 +29,13 @@ namespace ModularZenGarden {
 				contacts[new Point(-1, y)] = false;
 				contacts[new Point(type.size.X, y)] = false;
 			}
+		}
+
+		static public Garden create<T>(T garden_source) where T : notnull
+		{
+			Point position = Utils.get_pos(garden_source);
+			GardenType type = GardenType.get_type(garden_source);
+			return new Garden(position, type);
 		}
 
 		public void set_contact(Point tile, bool has_contact)

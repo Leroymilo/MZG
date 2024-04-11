@@ -1,6 +1,5 @@
 using Microsoft.Xna.Framework;
 using StardewModdingAPI;
-using StardewModdingAPI.Framework.ModLoading.Rewriters.StardewValley_1_6;
 using StardewValley.Buildings;
 using StardewValley.Objects;
 
@@ -12,14 +11,19 @@ namespace ModularZenGarden {
 		public static IMonitor? monitor;
 		public static bool apply_to_obelisks = false;
 
-		public static Point get_pos(Furniture furniture)
+		public static Point get_pos<T>(T garden_source) where T : notnull
 		{
-			return new Point(furniture.boundingBox.X/64, furniture.boundingBox.Y/64);
-		}
-
-		public static Point get_pos(Building building)
-		{
-			return building.GetBoundingBox().Location;
+			if (garden_source is Furniture)
+			{
+				var bb = ((Furniture)(object)garden_source).boundingBox;
+				return new Point(bb.X/64, bb.Y/64);
+			}
+			else if (garden_source is Building)
+			{
+				var bb = ((Building)(object)garden_source).GetBoundingBox();
+				return new Point(bb.X/64, bb.Y/64);
+			}
+			else throw new ArgumentException("The given object is neither a Furniture or a Building.");
 		}
 
 		public static void log(string message, LogLevel log_level = LogLevel.Info)

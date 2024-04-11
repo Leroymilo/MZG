@@ -1,3 +1,4 @@
+using System.Security.Principal;
 using Microsoft.Xna.Framework;
 using StardewValley.Buildings;
 using StardewValley.Objects;
@@ -10,39 +11,20 @@ namespace ModularZenGarden {
 
 		static readonly HashSet<Garden> to_update = new(new GardenComparer());
 
-		static readonly HashSet<Point> catalogues = new();
+
 
 		public static void clear()
 		{
 			gardens.Clear();
-			catalogues.Clear();
 		}
 
-		public static void remove_garden(Furniture furniture)
+		public static void remove_garden<T>(T garden_source) where T : notnull
 		{
-			Garden? garden = get_garden(furniture)
+			Garden? garden = get_garden(garden_source)
 				?? throw new NullReferenceException(
-					$"No registered garden matched at {Utils.get_pos(furniture)}."
+					$"No registered garden matched at {Utils.get_pos(garden_source)}."
 				);
 			
-			remove_garden(garden);
-
-			if (garden.type.name == "catalogue")
-				catalogues.Remove(garden.position);
-		}
-
-		public static void remove_garden(Building building)
-		{
-			Garden? garden = get_garden(building)
-				?? throw new NullReferenceException(
-					$"No registered garden matched at {Utils.get_pos(building)}."
-				);
-			
-			remove_garden(garden);
-		}
-
-		private static void remove_garden(Garden garden)
-		{
 			gardens.Remove(garden.position);
 
 			HashSet<Garden> neighbors = get_neighbors(garden);
@@ -56,25 +38,10 @@ namespace ModularZenGarden {
 			to_update.UnionWith(neighbors);
 		}
 
-		public static void add_garden(Furniture furniture)
+		public static void add_garden<T>(T garden_source) where T : notnull
 		{
-			Garden garden = new(furniture);
+			Garden garden = Garden.create(garden_source);
 
-			add_garden(garden);
-
-			if (garden.type.name == "catalogue")
-				catalogues.Add(garden.position);
-		}
-
-		public static void add_garden(Building building)
-		{
-			Garden garden = new(building);
-
-			add_garden(garden);
-		}
-
-		private static void add_garden(Garden garden)
-		{
 			HashSet<Garden> neighbors = get_neighbors(garden);
 
 			foreach (Garden garden_2 in neighbors)
@@ -100,22 +67,11 @@ namespace ModularZenGarden {
 			to_update.Clear();
 		}
 
-		public static Garden? get_garden(Furniture furniture)
+		public static Garden? get_garden<T>(T garden_source) where T : notnull
 		{
-			GardenType type = GardenType.get_type(furniture);
-			Point base_pos = Utils.get_pos(furniture);
-			return get_garden(type, base_pos);
-		}
-
-		public static Garden? get_garden(Building building)
-		{
-			GardenType type = GardenType.get_type(building);
-			Point base_pos = Utils.get_pos(building);
-			return get_garden(type, base_pos);
-		}
-
-		private static Garden? get_garden(GardenType type, Point base_pos)
-		{
+			GardenType type = GardenType.get_type(garden_source);
+			Point base_pos = Utils.get_pos(garden_source);
+			
 			// Removing a garden from a tile that's not its top left tile will move it
 			// To find it anyway, its necessary to search around the position
 			for (int x = 0; x < type.size.X; x++)

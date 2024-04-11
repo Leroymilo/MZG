@@ -8,9 +8,12 @@ using StardewModdingAPI;
 using StardewModdingAPI.Utilities;
 using StardewValley;
 using StardewValley.Buildings;
+using StardewValley.GameData.Shops;
 using StardewValley.Objects;
 
 namespace ModularZenGarden {
+
+	using Dict = Dictionary<string, object>;
 
 	struct BorderPart
 	{
@@ -35,49 +38,60 @@ namespace ModularZenGarden {
 
 		public static readonly Dictionary<string, GardenType> types = new();
 		public static readonly Dictionary<Point, List<BorderPart>> default_borders = new();
-		public static HashSet<string> building_names = new() {
-			"Earth Obelisk",
-			"Water Obelisk",
-			"Desert Obelisk"
-		};	// Excludes the Island Obelisk for now
 
-		public static bool is_garden(Furniture furniture)
+		public static bool is_garden<T>(T garden_source) where T : notnull
 		{
-			return furniture.ItemId.StartsWith("MZG");
-		}
-
-		public static bool is_garden(Building building)
-		{
-			return building_names.Contains(building.buildingType.Value);
-		}
-
-		public static string get_type_name(string full_name)
-		{
-			return full_name.Remove(0, "MZG ".Length);
-		}
-
-		public static GardenType get_type(Furniture furniture)
-		{
-			return types[get_type_name(furniture.ItemId)];
-		}
-
-		public static GardenType get_type(Building building)
-		{
-			switch (building.buildingType.Value)
+			try
 			{
-				case "Earth Obelisk":
-					return types["stones"];
-				case "Water Obelisk":
-					return types["tree"];
-				case "Desert Obelisk":
-					return types["lantern"];
-				default:
-					throw new InvalidDataException("This building type has no garden type associated.");
+				get_type(garden_source);
+				return true;
+			}
+			catch (InvalidDataException)
+			{
+				return false;
 			}
 		}
 
-		public static void make_blank_types(IModHelper helper)
+		public static GardenType get_type(string full_name)
 		{
+			if (full_name.StartsWith("MZG"))
+				return types[full_name.Remove(0, "MZG_X ".Length)];
+			// X can be F or B for Furniture or Building
+
+			return full_name switch
+			{
+				// Excludes the Island Obelisk for now
+				"Earth Obelisk" => types["stones"],
+				"Water Obelisk" => types["tree"],
+				"Desert Obelisk" => types["lantern"],
+				_ => throw new InvalidDataException("This type name has no garden associated."),
+			};
+		}
+
+		public static GardenType get_type<T>(T garden_source) where T : notnull
+		{
+			if (garden_source is Furniture)
+				return get_type(((Furniture)(object)garden_source).ItemId);
+			else if (garden_source is Building)
+				return get_type(((Building)(object)garden_source).buildingType.Value);
+			else throw new ArgumentException("The given object is neither a Furniture or a Building.");
+		}
+
+		public static void load_types(IModHelper helper)
+		{
+
+			// Hardcoded Garden Catalogue
+			new GardenType(
+				"catalogue",
+					new Dict() {
+					{"width", 1L},
+					{"height", 1L},
+					{"use_default_base", true}
+				},
+				helper
+			);
+
+			// Making blank types
 			for (long w = 1; w < 4; w++)
 			{
 				for (long h = 1; h < 4; h++)
@@ -89,6 +103,23 @@ namespace ModularZenGarden {
 						{"use_default_feature", true}
 					};
 					new GardenType($"empty {w}x{h}", type_data, helper);
+				}
+			}
+
+			// Loading gardens from assets/types.json
+			Dictionary<string, Dict> types_data =
+				helper.ModContent.Load<Dictionary<string, Dict>>("assets/types.json");
+			foreach ((string type_name, var type_data) in types_data)
+			{
+				try
+				{
+					new GardenType(
+						type_name, type_data, helper
+					);
+				}
+				catch (Exception ex)
+				{
+					Utils.log($"Could not load Garden type {type_name} : {ex}", LogLevel.Warn);
 				}
 			}
 		}
@@ -185,7 +216,7 @@ namespace ModularZenGarden {
 			}
 		}
 
-		public string get_string_data(string full_name)
+		private string get_string_data(string full_name)
 		{
 			// Building the string to patch into Content/Data/Furniture.xnb
 
@@ -212,6 +243,63 @@ namespace ModularZenGarden {
 			string_data += "/MZG_furniture";					// context tag to appear in custom catalog
 
 			return string_data;
+		}
+
+		public static void patch_furniture_data(IAssetData asset)
+		{
+			var editor = asset.AsDictionary<string, string>();
+			foreach ((string type_name, GardenType type) in types)
+			{
+				string full_name = "MZG_F " + type_name;
+				string data = type.get_string_data(full_name);
+				editor.Data[full_name] = data;
+			}
+		}
+
+		public static void patch_shop_data(IAssetData asset)
+		{
+			// the catalogue item sold at Robin's
+			ShopItemData carpenter_shop_item_data = new()
+			{
+				Id = "MZG_catalogue",
+				ItemId = "(F)MZG_F catalogue",
+				Price = 2000
+			};
+
+			// the catalogue shop itself
+			ShopData catalogue_shop_data = new()
+			{
+				Items = new List<ShopItemData>() {
+					new() {
+						Price = 0,
+						Id = "Default",
+						ItemId = "ALL_ITEMS (F)",
+						PerItemCondition = "ITEM_CONTEXT_TAG Target MZG_furniture"
+					}
+				},
+				CustomFields = new Dictionary<string, string>() {
+					{"HappyHomeDesigner/Catalogue", "true"}
+				},
+				Owners = new List<ShopOwnerData>() { 
+					new() { Name = "AnyOrNone" }
+				}
+			};
+
+			var data = asset.AsDictionary<string, ShopData>().Data;
+			// Adding its shop data
+			data["MZG_catalogue"] = catalogue_shop_data;
+			// Adding the furniture to Robin's shop
+			ShopData carpenter = data["Carpenter"];
+			int f_cat_index = carpenter.Items.FindIndex(
+				shop_item => {return shop_item.ItemId == "(F)1226";}
+			);
+			carpenter.Items.Insert(f_cat_index + 1, carpenter_shop_item_data);
+			// right after the vanilla Furniture Catalogue so it looks nice
+		}
+
+		public static void patch_building_data(IAssetData asset)
+		{
+			//TODO
 		}
 
 		public Texture2D get_base()
