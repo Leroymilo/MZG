@@ -11,11 +11,12 @@ namespace ModularZenGarden {
 
 		static readonly HashSet<Garden> to_update = new(new GardenComparer());
 
-
+		public static readonly Dictionary<string, List<Point>> buildings = new();
 
 		public static void clear()
 		{
 			gardens.Clear();
+			buildings.Clear();
 		}
 
 		public static void remove_garden<T>(T garden_source) where T : notnull
@@ -36,9 +37,19 @@ namespace ModularZenGarden {
 			}
 
 			to_update.UnionWith(neighbors);
+			to_update.Remove(garden);
+
+			if (garden_source is Building)
+			{
+				string type = ((Building)(object)garden_source).buildingType.Value;
+				if (buildings.ContainsKey(type))
+				{
+					buildings[type].Remove(garden.position);
+				}
+			}
 		}
 
-		public static void add_garden<T>(T garden_source) where T : notnull
+		public static Garden add_garden<T>(T garden_source) where T : notnull
 		{
 			Garden garden = Garden.create(garden_source);
 
@@ -55,6 +66,18 @@ namespace ModularZenGarden {
 			
 			to_update.UnionWith(neighbors);
 			to_update.Add(garden);
+
+			if (garden_source is Building)
+			{
+				string type = ((Building)(object)garden_source).buildingType.Value;
+				if (!buildings.ContainsKey(type))
+				{
+					buildings[type] = new();
+				}
+				buildings[type].Add(garden.position);
+			}
+
+			return garden;
 		}
 
 		public static void update_textures()
@@ -72,6 +95,11 @@ namespace ModularZenGarden {
 			GardenType type = GardenType.get_type(garden_source);
 			Point base_pos = Utils.get_pos(garden_source);
 			
+			return get_garden(type, base_pos);
+		}
+
+		public static Garden? get_garden(GardenType type, Point base_pos)
+		{
 			// Removing a garden from a tile that's not its top left tile will move it
 			// To find it anyway, its necessary to search around the position
 			for (int x = 0; x < type.size.X; x++)

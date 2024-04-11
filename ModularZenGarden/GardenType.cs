@@ -1,13 +1,11 @@
-using System.ComponentModel;
-using System.Data.Common;
-using System.Net;
-using System.Reflection;
+using System.Runtime.InteropServices;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI;
 using StardewModdingAPI.Utilities;
 using StardewValley;
 using StardewValley.Buildings;
+using StardewValley.GameData.Buildings;
 using StardewValley.GameData.Shops;
 using StardewValley.Objects;
 
@@ -30,14 +28,14 @@ namespace ModularZenGarden {
 	class GardenType
 	{
 		public readonly string name;
-		public readonly string? author = null;
+		private readonly string? author = null;
 		public readonly Point size;
-		public readonly string dim;
+		private readonly string dim;
 		public readonly Dictionary<string, Texture2D> bases = new();
 		public readonly Dictionary<string, Texture2D> features = new();
 
-		public static readonly Dictionary<string, GardenType> types = new();
-		public static readonly Dictionary<Point, List<BorderPart>> default_borders = new();
+		private static readonly Dictionary<string, GardenType> types = new();
+		private static readonly Dictionary<Point, List<BorderPart>> default_borders = new();
 
 		public static bool is_garden<T>(T garden_source) where T : notnull
 		{
@@ -54,16 +52,26 @@ namespace ModularZenGarden {
 
 		public static GardenType get_type(string full_name)
 		{
-			if (full_name.StartsWith("MZG"))
-				return types[full_name.Remove(0, "MZG_X ".Length)];
-			// X can be F or B for Furniture or Building
+			if (full_name.StartsWith("MZG_B"))
+			{
+				// Handles the case of a building's skin texture
+				full_name = full_name.Remove(full_name.LastIndexOf('@'));
+				return types[full_name.Remove(0, "MZG_B ".Length)];
+			}
+
+			else if (full_name.StartsWith("MZG"))
+			{
+				// Handles the case of a furniture's garden type
+				return types[full_name.Remove(0, "MZG ".Length)];
+			}
 
 			return full_name switch
 			{
-				// Excludes the Island Obelisk for now
+				// Handles the case of a building's garden type
 				"Earth Obelisk" => types["stones"],
 				"Water Obelisk" => types["tree"],
 				"Desert Obelisk" => types["lantern"],
+				// Excludes the Island Obelisk for now
 				_ => throw new InvalidDataException("This type name has no garden associated."),
 			};
 		}
@@ -124,7 +132,7 @@ namespace ModularZenGarden {
 			}
 		}
 
-		public GardenType(string type_name, Dictionary<string, object> type_data, IModHelper helper)
+		public GardenType(string type_name, Dict type_data, IModHelper helper)
 		{
 			types[type_name] = this;
 
@@ -250,7 +258,7 @@ namespace ModularZenGarden {
 			var editor = asset.AsDictionary<string, string>();
 			foreach ((string type_name, GardenType type) in types)
 			{
-				string full_name = "MZG_F " + type_name;
+				string full_name = $"MZG {type_name}";
 				string data = type.get_string_data(full_name);
 				editor.Data[full_name] = data;
 			}
@@ -262,7 +270,7 @@ namespace ModularZenGarden {
 			ShopItemData carpenter_shop_item_data = new()
 			{
 				Id = "MZG_catalogue",
-				ItemId = "(F)MZG_F catalogue",
+				ItemId = "(F)MZG catalogue",
 				Price = 2000
 			};
 
@@ -299,7 +307,44 @@ namespace ModularZenGarden {
 
 		public static void patch_building_data(IAssetData asset)
 		{
-			//TODO
+			var data = asset.AsDictionary<string, BuildingData>().Data;
+
+			foreach ((string b_type, BuildingData b_data) in data)
+			{
+				GardenType type;
+				try
+				{
+					type = get_type(b_type);
+				}
+				catch (InvalidDataException)
+				{
+					continue;
+				}
+
+				b_data.Size = type.size;
+				b_data.Texture = $"MZG {type.name}";
+				b_data.DrawShadow = false;
+				b_data.SortTileOffset = type.size.Y;
+
+				if (!GardenCache.buildings.ContainsKey(b_type)) continue;
+				foreach (Point pos in GardenCache.buildings[b_type])
+				{
+
+					Garden garden = GardenCache.get_garden(type, pos)
+						?? throw new NullReferenceException(
+							$"No registered garden matched at {pos}."
+						);
+					string skin_id = garden.get_skin_id();
+
+					b_data.Skins.Add(new BuildingSkin() {
+						Id = skin_id,
+						Name = $"Modular Zen Garden skin",
+						Description = $"You shouldn't be able to see that",
+						Texture = skin_id,
+						// Condition = "FALSE"	// to avoid showing in shop
+					});
+				}
+			}
 		}
 
 		public Texture2D get_base()
@@ -317,13 +362,46 @@ namespace ModularZenGarden {
 			return texture;
 		}
 
-		public void patch_image(IAssetData asset)
+		public void patch_default_texture(IAssetData asset)
 		{
-			// Patching the image used for the items
+			// Patching the image used by default (item icon, unconnected)
 
 			IAssetDataForImage editor = asset.AsImage();
 
 			foreach (BorderPart border_part in get_default_border())
+			{
+				Rectangle target_area = new(
+					border_part.tile.X * SpriteManager.tile_size.X,
+					(border_part.tile.Y + size.Y - 1) * SpriteManager.tile_size.X,
+					SpriteManager.tile_size.X, SpriteManager.tile_size.Y
+				);
+
+				editor.PatchImage(
+					source: border_part.texture,
+					targetArea: target_area,
+					patchMode: PatchMode.Overlay
+				);
+			}
+
+			editor.PatchImage(
+				source: features[SDate.Now().SeasonKey],
+				patchMode: PatchMode.Overlay
+			);
+		}
+
+		public void patch_building(IAssetData asset, string sprite_name)
+		{
+			string[] coords = sprite_name.Split('@').Last().Split('x', 2);
+			Point pos = new(int.Parse(coords[0]), int.Parse(coords[1]));
+
+			Garden garden = GardenCache.get_garden(this, pos)
+				?? throw new NullReferenceException(
+					$"No registered garden matched at {pos}."
+				);
+
+			IAssetDataForImage editor = asset.AsImage();
+
+			foreach (BorderPart border_part in garden.border_parts)
 			{
 				Rectangle target_area = new(
 					border_part.tile.X * SpriteManager.tile_size.X,

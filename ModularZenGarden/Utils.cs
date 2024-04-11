@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.Xna.Framework;
 using StardewModdingAPI;
 using StardewValley.Buildings;
@@ -9,6 +10,7 @@ namespace ModularZenGarden {
 	{
 		public static readonly string[] seasons = {"spring", "summer", "fall", "winter"};
 		public static IMonitor? monitor;
+		public static IModHelper? helper;
 		public static bool apply_to_obelisks = false;
 
 		public static Point get_pos<T>(T garden_source) where T : notnull
@@ -32,6 +34,14 @@ namespace ModularZenGarden {
 				throw new NullReferenceException("Monitor was not set.");
 			
 			monitor.Log(message, log_level);
+		}
+
+		public static void invalidate_cache(string asset_name)
+		{
+			if (helper == null)
+				throw new NullReferenceException("Helper was not set");
+			
+			helper.GameContent.InvalidateCache(asset_name);
 		}
 	}
 

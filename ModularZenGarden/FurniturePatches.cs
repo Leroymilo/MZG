@@ -157,7 +157,7 @@ namespace ModularZenGarden {
 			try
 			{
 				// This only applies to Zen Gardens
-				if (__instance.ItemId.Equals("MZG_F catalogue"))
+				if (__instance.ItemId.Equals("MZG catalogue"))
 				{
 					if (__instance.Location == null || justCheckingForActivity)
 						return true;	// run original logic

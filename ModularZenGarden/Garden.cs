@@ -47,6 +47,12 @@ namespace ModularZenGarden {
 		public void update_texture()
 		{
 			type.get_border(get_contact_value, border_parts);
+			Utils.invalidate_cache(get_skin_id());
+		}
+
+		public string get_skin_id()
+		{
+			return $"MZG_B {type.name}@{position.X}x{position.Y}";
 		}
 
 		private int get_contact_value(Point tile)
