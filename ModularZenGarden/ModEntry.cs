@@ -311,6 +311,7 @@ namespace ModularZenGarden
 		private void reset_building_textures()
 		{
 			if (config == null) throw new NullReferenceException();
+			if (!Context.IsWorldReady) return;
 
 			List<Building> updated_buildings = new();
 
