@@ -11,7 +11,8 @@ namespace ModularZenGarden {
 		public static readonly string[] seasons = {"spring", "summer", "fall", "winter"};
 		public static IMonitor? monitor;
 		public static IModHelper? helper;
-		public static bool apply_to_obelisks = false;
+		public static ModConfig? config ;
+		public static bool USJB_installed = false;
 
 		public static Point get_pos<T>(T garden_source) where T : notnull
 		{

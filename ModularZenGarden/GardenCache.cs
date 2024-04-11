@@ -133,6 +133,11 @@ namespace ModularZenGarden {
 
 			return neighbors;
 		}
+	
+		public static void invalidate_buildings()
+		{
+			
+		}
 	}
 
 }

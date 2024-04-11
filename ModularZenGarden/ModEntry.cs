@@ -5,7 +5,6 @@ using StardewModdingAPI.Events;
 using StardewValley.Objects;
 using StardewValley.Buildings;
 using StardewValley;
-using StardewValley.Internal;
 
 namespace ModularZenGarden
 {
@@ -13,12 +12,17 @@ namespace ModularZenGarden
     /// <summary>The mod entry point.</summary>
     internal sealed class ModEntry : Mod
     {
+		private ModConfig? config;
+
         /// <summary>The mod entry point, called after the mod is first loaded.</summary>
         /// <param name="helper">Provides simplified APIs for writing mods.</param>
         public override void Entry(IModHelper helper)
         {
+			config = Helper.ReadConfig<ModConfig>();
+
 			Utils.monitor = Monitor;
 			Utils.helper = helper;
+			Utils.config = config;
 			helper.Events.Content.AssetRequested += on_asset_requested;
 			helper.Events.World.FurnitureListChanged += on_furniture_list_changed;
 			helper.Events.World.BuildingListChanged += on_building_list_changed;
@@ -83,12 +87,59 @@ namespace ModularZenGarden
 		/// <param name="e">The event data.</param>
 		private void on_game_launched(object? sender, GameLaunchedEventArgs e)
 		{
-			string CP_id = "leroymilo.USJB";
-			// check if a mod is loaded
-			if (Helper.ModRegistry.IsLoaded(CP_id))
+			if (config == null) throw new NullReferenceException("Config was not set.");
+
+			if (Helper.ModRegistry.IsLoaded("leroymilo.USJB"))
 			{
-				Utils.apply_to_obelisks = true;
+				// compatibility with USJB
+				Utils.USJB_installed = true;
 			}
+
+			if (!config.ignore_SJB_integration)
+			{
+				config.change_buildings = Utils.USJB_installed;
+				Helper.WriteConfig(config);
+			}
+
+			// get Generic Mod Config Menu's API (if it's installed)
+			var configMenu = Helper.ModRegistry.GetApi
+				<GenericModConfigMenu.IGenericModConfigMenuApi>
+				("spacechase0.GenericModConfigMenu");
+			if (configMenu is null)
+				return;
+			
+			// register mod
+			configMenu.Register(
+				mod: ModManifest,
+				reset: () => config = new ModConfig(),
+				save: () => Helper.WriteConfig(config)
+			);
+
+			string tooltip = "This will change some Farm Buildings into Modular Zen Garden.";
+			tooltip += "\nIf Seasonal Japanese Buildings (SJB) is installed, this is on by default.";
+
+			// add some config options
+			configMenu.AddBoolOption(
+				mod: ModManifest,
+				name: () => "Change Buildings",
+				tooltip: () => tooltip,
+				getValue: () => config.change_buildings,
+				setValue: value => {
+					config.change_buildings = value;
+					// Utils.invalidate_cache("Data/Buildings");
+					reset_building_textures();
+				}
+			);
+			
+			tooltip = "This will prevent the previous option from being automatically changed.";
+
+			configMenu.AddBoolOption(
+				mod: ModManifest,
+				name: () => "Ignore SJB Integration",
+				tooltip: () => tooltip,
+				getValue: () => config.ignore_SJB_integration,
+				setValue: value => config.ignore_SJB_integration = value
+			);
 		}
 
 		/// <inheritdoc cref="IContentEvents.AssetRequested"/>
@@ -96,6 +147,8 @@ namespace ModularZenGarden
 		/// <param name="e">The event data.</param>
 		private void on_asset_requested(object? sender, AssetRequestedEventArgs e)
 		{
+			if (config == null) return;
+			
 			if (e.NameWithoutLocale.IsEquivalentTo("Data/Furniture"))
 			{
 				// Adding all Zen Garden Furniture
@@ -110,7 +163,7 @@ namespace ModularZenGarden
 				return;
 			}
 
-			if (e.NameWithoutLocale.IsEquivalentTo("Data/Buildings"))
+			if (e.NameWithoutLocale.IsEquivalentTo("Data/Buildings") && config.change_buildings)
 			{
 				// Adding Sprites to obelisks
 				e.Edit(GardenType.patch_building_data);
@@ -123,6 +176,7 @@ namespace ModularZenGarden
 			{
 				if (type_name.StartsWith("MZG_B"))
 				{
+					if (!config.change_buildings) return;
 					// Patches a skin texture for buildings
 					GardenType type = GardenType.get_type(type_name);
 
@@ -173,7 +227,8 @@ namespace ModularZenGarden
 			// This is probably useless since you edit buildings from shops,
 			// but I leave it just in case for mods allowing to edit buildings like furniture
 
-			if (!e.IsCurrentLocation) return;	// ignoring furniture placed outside current location
+			if (!e.IsCurrentLocation) return;	// ignoring buildings placed outside current location
+			if (config == null || !config.change_buildings) return;
 			
 			bool buildings_updated = false;
 
@@ -229,21 +284,61 @@ namespace ModularZenGarden
 
 			List<Building> updated_buildings = new();
 
-			foreach (Building building in location.buildings) {
-				if (!GardenType.is_garden(building)) continue;
-				Garden garden = GardenCache.add_garden(building);
-				updated_buildings.Add(building);
-				building.skinId.Set(garden.get_skin_id());
-			}
-
-			if (updated_buildings.Count() > 0)
+			if (config != null && config.change_buildings)
 			{
-				// Invalidate Data/Buildings to add sprites
-				Utils.invalidate_cache("Data/Buildings");
+				foreach (Building building in location.buildings) {
+					if (!GardenType.is_garden(building)) continue;
+					Garden garden = GardenCache.add_garden(building);
+					updated_buildings.Add(building);
+					building.skinId.Set(garden.get_skin_id());
+				}
+
+				if (updated_buildings.Count > 0)
+				{
+					// Invalidate Data/Buildings to add sprites
+					Utils.invalidate_cache("Data/Buildings");
+				}
 			}
 			
 			GardenCache.update_textures();
 
+			foreach (Building building in updated_buildings)
+			{
+				building.resetTexture();
+			}
+		}
+
+		private void reset_building_textures()
+		{
+			if (config == null) throw new NullReferenceException();
+
+			List<Building> updated_buildings = new();
+
+			GameLocation location = Game1.currentLocation;
+			foreach (Building building in location.buildings) {
+				if (!GardenType.is_garden(building)) continue;
+
+				Garden? garden;
+
+				if (config.change_buildings)
+				{
+					garden = GardenCache.add_garden(building);
+					building.skinId.Set(garden.get_skin_id());
+				}
+				else
+				{
+					garden = GardenCache.get_garden(building);
+					if (garden == null) continue;
+					GardenCache.remove_garden(building);
+					building.skinId.Set(null);
+				}
+
+				updated_buildings.Add(building);
+			}
+			
+			Utils.invalidate_cache("Data/Buildings");
+			GardenCache.update_textures();
+			
 			foreach (Building building in updated_buildings)
 			{
 				building.resetTexture();
