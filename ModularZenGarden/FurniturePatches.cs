@@ -171,7 +171,7 @@ namespace ModularZenGarden {
 			}
 			catch (Exception ex)
 			{
-				Utils.log($"Failed in {nameof(draw_prefix)}:\n{ex}", LogLevel.Error);
+				Utils.log($"Failed in {nameof(checkForAction_prefix)}:\n{ex}", LogLevel.Error);
 				return true; // run original logic
 			}
 		}
