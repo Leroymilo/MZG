@@ -99,7 +99,6 @@ namespace ModularZenGarden {
 			else
 			{
 				from_ = base_3x3;
-				season = "other";
 			}
 			if (from_ == null) throw new NullReferenceException("Textures not loaded");
 			
