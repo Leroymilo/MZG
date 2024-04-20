@@ -13,5 +13,15 @@
 		"width": 3,
 		"height": 3,
 		"author": "SonreirAngel"
+	},
+	"stone1": {
+		"width": 2,
+		"height": 2,
+		"author": "SonreirAngel"
+	},
+	"cairn": {
+		"width": 2,
+		"height": 2,
+		"author": "Leroymilo"
 	}
 }
